@@ -1,6 +1,6 @@
 {
-  "appId": "com.imo.jesyonlekol",
-  "appName": "MEDA",
+  "appId": "com.meda.app",
+  "appName": "Meda",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
