@@ -43,11 +43,11 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Non APK a = MEDA.apk
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk MEDA.apk
+      - name: Non APK a = Meda.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Meda.apk
 
       - name: Voye APK a
         uses: actions/upload-artifact@v4
         with:
-          name: MEDA-apk
-          path: MEDA.apk
+          name: Meda-apk
+          path: Meda.apk
