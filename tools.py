@@ -40,9 +40,29 @@ BRIDGE = r"""
 /* --- Watchdog: pa janm kite ekran blan --- */
 (function(){
   var lastErr = '';
-  window.addEventListener('error', function(e){ lastErr = (e.message || 'erè') + (e.lineno ? ' (liy ' + e.lineno + ')' : ''); });
+  window.__bridgeNotice = function(msg){
+    try {
+      var box = document.getElementById('__bridge_notice');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = '__bridge_notice';
+        box.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#B3261E;color:#fff;font:14px/1.35 sans-serif;padding:10px 12px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.3);word-break:break-word';
+        box.onclick = function(){ box.style.display = 'none'; };
+        document.body.appendChild(box);
+      }
+      box.textContent = msg + '  (touche pou fèmen)';
+      box.style.display = 'block';
+      clearTimeout(box._t);
+      box._t = setTimeout(function(){ box.style.display = 'none'; }, 15000);
+    } catch (x) {}
+  };
+  window.addEventListener('error', function(e){
+    lastErr = (e.message || 'erè') + (e.lineno ? ' (liy ' + e.lineno + ')' : '');
+    if (e.message && !/ResizeObserver|Script error/i.test(e.message) && window.__bridgeNotice) window.__bridgeNotice('Erè: ' + lastErr);
+  });
   window.addEventListener('unhandledrejection', function(e){
     var r = e.reason; lastErr = String((r && (r.code || r.message)) || r);
+    if (window.__bridgeNotice) window.__bridgeNotice('Erè: ' + lastErr);
   });
   document.addEventListener('DOMContentLoaded', function(){
     var t0 = Date.now();
@@ -99,6 +119,29 @@ def web():
         'try{ await Promise.race([fbAuth.signOut(), new Promise(function(r){ setTimeout(r, 4000); })]); }catch(e){}',
         html)
     print('signOut pwoteje: ' + str(n) + ' kote')
+
+    # render() pa kite ekran an bloke an silans: si li kraze, nou wè mesaj erè a
+    html = patch(
+        html,
+        'function render(view){\n',
+        'function render(view){\n'
+        '  try{ return _renderRaw(view); }\n'
+        '  catch(err){\n'
+        '    console.error("Erè render", err);\n'
+        '    if(window.__bridgeNotice) window.__bridgeNotice("Erè ekran: " + ((err && err.message) || err));\n'
+        '    var a = document.getElementById("app");\n'
+        '    if(a && !a.innerText.trim()) a.innerHTML = \'<div style="padding:40px 20px;text-align:center;font-family:sans-serif"><h3>Yon erè fèt</h3><button onclick="location.reload()" style="padding:12px 22px;border:0;border-radius:8px;background:#1877F2;color:#fff;font-size:16px">Rekòmanse</button></div>\';\n'
+        '  }\n'
+        '}\n'
+        'function _renderRaw(view){\n',
+        'render')
+    # si done yo pa ka anrejistre, montre rezon an (egz: PERMISSION_DENIED)
+    html = patch(
+        html,
+        "console.error('Erè pou anrejistre done yo', e);",
+        "console.error('Erè pou anrejistre done yo', e);\n"
+        "    if(window.__bridgeNotice) window.__bridgeNotice('Done yo pa anrejistre: ' + ((e && (e.code || e.message)) || e));",
+        'saveData')
 
     www = os.path.join(ROOT, 'www')
     os.makedirs(www, exist_ok=True)
@@ -205,4 +248,3 @@ if __name__ == '__main__':
         android()
     else:
         sys.exit('Itilizasyon: python3 tools.py web|android')
-  
