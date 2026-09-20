@@ -1,0 +1,8 @@
+{
+  "appId": "com.imo.jesyonlekol",
+  "appName": "MEDA",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

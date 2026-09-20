@@ -1,0 +1,16 @@
+{
+  "name": "jesyon-lekol-apk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jesyon Lekòl — APK Android (Capacitor)",
+  "scripts": {
+    "prepare-web": "node scripts/prepare.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}
