@@ -2470,12 +2470,42 @@ function podiumHtml(ranked){
 }
 
 /* ===================== BOOT / RENDER ===================== */
+/* ---- Firebase Realtime Database pa estoke tablo/objè vid: lè n li done yo
+   ankò, chan tankou "grades", "students", "subjects" (ak "classes" si pa gen
+   okenn klas) disparèt (undefined) e sa te fè app la kraze ("Cannot read
+   properties of undefined") lè yon klas poko gen nòt, elèv oswa matyè.
+   Fonksyon sa a remèt tout chan sa yo apre chak lekti. ---- */
+function normalizeLoadedData(d){
+  if(!d || typeof d!=='object') return d;
+  const arr = v => Array.isArray(v) ? v : (v && typeof v==='object' ? Object.keys(v).map(k=>v[k]) : []);
+  const fixClasses = list => list.forEach(c=>{
+    if(!c || typeof c!=='object') return;
+    c.subjects = arr(c.subjects);
+    c.students = arr(c.students);
+    if(!c.grades || typeof c.grades!=='object') c.grades = {};
+  });
+  d.admins = arr(d.admins);
+  d.classes = arr(d.classes);
+  d.terms = arr(d.terms);
+  fixClasses(d.classes);
+  if(d.academicYears && typeof d.academicYears==='object'){
+    Object.keys(d.academicYears).forEach(y=>{
+      const yd = d.academicYears[y];
+      if(!yd || typeof yd!=='object'){ d.academicYears[y] = { classes:[], terms:[] }; return; }
+      yd.classes = arr(yd.classes);
+      yd.terms = arr(yd.terms);
+      fixClasses(yd.classes);
+    });
+  }
+  return d;
+}
 async function boot(){
   /* Etabli omwen yon sesyon Firebase (anonim si se pa yon vrè kont) anvan
      nou eseye li done yo — Realtime Database a mande yon sesyon valab. */
   if(FIREBASE_ENABLED && fbAuth) await ensureBaselineAuth();
   const loaded = await loadData();
   DATA = loaded || { schoolName:'', crestCode:'', admins:[], classes:[], terms:[...DEFAULT_TERMS] };
+  normalizeLoadedData(DATA);
   if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
   if(!DATA.avgScale) DATA.avgScale = 100;
   migrateAcademicYears();
