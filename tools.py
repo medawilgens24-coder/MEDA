@@ -36,8 +36,44 @@ BRIDGE = r"""
     return origClick.apply(this, arguments);
   };
 })();
+
+/* --- Watchdog: pa janm kite ekran blan --- */
+(function(){
+  var lastErr = '';
+  window.addEventListener('error', function(e){ lastErr = (e.message || 'erè') + (e.lineno ? ' (liy ' + e.lineno + ')' : ''); });
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e.reason; lastErr = String((r && (r.code || r.message)) || r);
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    var t0 = Date.now();
+    var app = document.getElementById('app');
+    if (!app) return;
+    function empty(){ return app.children.length === 0; }
+    if (empty()) app.innerHTML = '<div style="padding:60px 20px;text-align:center;font-family:sans-serif;color:#65676B">Ap chaje…</div>';
+    var iv = setInterval(function(){
+      var loader = app.children.length === 1 && app.firstChild.textContent === 'Ap chaje…';
+      if (!loader && !empty()) { clearInterval(iv); return; }
+      if (Date.now() - t0 > 12000) {
+        clearInterval(iv);
+        app.innerHTML = '<div style="padding:40px 20px;text-align:center;font-family:sans-serif;color:#050505">' +
+          '<h3 style="margin:0 0 10px">App la pa ka chaje</h3>' +
+          '<p style="margin:0 0 16px;color:#65676B">Verifye entènèt ou (' + (navigator.onLine ? 'konekte' : 'PA konekte') + ') epi eseye ankò.</p>' +
+          '<button onclick="location.reload()" style="padding:12px 22px;border:0;border-radius:8px;background:#1877F2;color:#fff;font-size:16px">Eseye ankò</button>' +
+          (lastErr ? '<p style="margin:18px 0 0;font-size:12px;color:#8A8D91;word-break:break-word">Detay: ' + String(lastErr).replace(/</g, '&lt;') + '</p>' : '') +
+          '</div>';
+      }
+    }, 1000);
+  });
+})();
 </script>
 """
+
+
+def patch(html, old, new, label):
+    if old not in html:
+        print('AVÈTISMAN: pa jwenn "' + label + '" — patch sa a pa aplike')
+        return html
+    return html.replace(old, new)
 
 
 def web():
@@ -47,6 +83,23 @@ def web():
     if not m:
         sys.exit('Pa jwenn <head> nan index.html')
     html = html[:m.end()] + BRIDGE + html[m.end():]
+
+    # Koneksyon anonim Firebase la pa ka bloke app la pou tout tan (max 8 segonn)
+    html = patch(
+        html,
+        'async function ensureBaselineAuth(){',
+        'async function ensureBaselineAuth(){\n'
+        '  return Promise.race([_ensureBaselineAuthRaw(), new Promise(function(r){ setTimeout(function(){ r(null); }, 8000); })]);\n'
+        '}\n'
+        'async function _ensureBaselineAuthRaw(){',
+        'ensureBaselineAuth')
+    # signOut() pa ka bloke dekonneksyon an (max 4 segonn)
+    html, n = re.subn(
+        r'try\{ await fbAuth\.signOut\(\); \}catch\(e\)\{\}',
+        'try{ await Promise.race([fbAuth.signOut(), new Promise(function(r){ setTimeout(r, 4000); })]); }catch(e){}',
+        html)
+    print('signOut pwoteje: ' + str(n) + ' kote')
+
     www = os.path.join(ROOT, 'www')
     os.makedirs(www, exist_ok=True)
     with open(os.path.join(www, 'index.html'), 'w', encoding='utf-8') as f:
@@ -152,3 +205,4 @@ if __name__ == '__main__':
         android()
     else:
         sys.exit('Itilizasyon: python3 tools.py web|android')
+  
