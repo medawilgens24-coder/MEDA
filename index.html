@@ -2251,7 +2251,7 @@ function downloadBackupNow(){
 
 /* ===================== SESSION ===================== */
 let session = { role:null, classId:null, teacherId:null, adminUsername:null };
-let ui = { adminView:'akey', teacherView:'akey', term:null, loginTab:'admin', authMode:null, errors:{}, classDetailFor:null, classTab:'eleve', appearance:'light', navStyle:'classic', notifDesktop:false, ficheStudentId:null, studentSearch:'', studentSort:'oldest', subjectSearch:'', classSearch:'', msgTeacherId:null, msgShowProfile:false, msgActionFor:null, msgEditId:null, pickClassForTeacher:false, teacherDetailFor:null, teacherSearch:'', docsClassId:null, docsStudentId:null, docsType:null, docsTemplate:null, docsColor:null, docsFont:null, docsTitle:null, docsBody:null, docsShowPreview:false, docsPreviewed:false };
+let ui = { adminView:'akey', teacherView:'akey', term:null, loginTab:'admin', authMode:null, errors:{}, classDetailFor:null, classTab:'eleve', appearance:'light', navStyle:'classic', notifDesktop:false, ficheStudentId:null, studentSearch:'', studentSort:'oldest', subjectSearch:'', classSearch:'', msgTeacherId:null, msgShowProfile:false, msgActionFor:null, msgEditId:null, pickClassForTeacher:false, teacherDetailFor:null, teacherSearch:'', docsClassId:null, docsStudentId:null, docsType:null, docsTemplate:null, docsColor:null, docsFont:null, docsTitle:null, docsBody:null, docsShowPreview:false, docsPreviewed:false, palmaresShowPreview:false, bulletinShowPreview:false, bulletinStudentId:null, walSearchCode:'' };
 
 /* ===================== HELPERS ===================== */
 function findClass(id){ return DATA.classes.find(c=>c.id===id); }
@@ -3455,9 +3455,11 @@ function dataCleanupHtml(){
 const OWNER_EMAIL = 'medawilgens24@gmail.com';
 const NATCASH_RAW = '+50943011194';
 const NATCASH_DISPLAY = '+509 4301 1194';
-const PRICES = { doc:2.5, bulletin:5, fontDay:10 };
-/* Gratis = premye yo nan lis la. Chanje lis sa yo si w vle chanje sa ki gratis. */
-const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'] };
+const PRICES = { doc:2.5, bulletin:5, palmares:15, fontDay:10 };
+/* Gratis = premye yo nan lis la. Chanje lis sa yo si w vle chanje sa ki gratis.
+   bulletinStyles = peman ENDIVIDYÈL (chak bilten se pou 1 sèl elèv).
+   palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv). */
+const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
 const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
@@ -3589,12 +3591,13 @@ async function walletSpend(kind, amount){
 function paidNeeds(o){
   const needs=[];
   if(o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) needs.push({kind:'doc', amount:PRICES.doc, label:'Modèl dokiman premium'});
-  if(o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) needs.push({kind:'bulletin', amount:PRICES.bulletin, label:'Estil bilten premium'});
+  if(o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) needs.push({kind:'bulletin', amount:PRICES.bulletin, label:'Estil bilten premium (1 elèv)'});
+  if(o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) needs.push({kind:'palmares', amount:PRICES.palmares, label:'Estil palmarès premium (tout klas la)'});
   if(o.docFont && !FREE.fonts.includes(o.docFont) && !walletFontPassActive()) needs.push({kind:'fontpass', amount:PRICES.fontDay, label:'Estil ekriti premium (aksè 24è)'});
   return needs;
 }
 function isPremiumSel(o){
-  return !!((o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont)));
+  return !!((o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont)));
 }
 /* Kouri fn() (enprime a) apre verifikasyon peman an. Lè pa gen anyen pou peye
    (estil gratis, pwopriyetè, oswa pas 24è aktif), fn() kouri IMEDYATMAN nan menm klik la,
@@ -3609,7 +3612,7 @@ function paidThen(o, fn){
 /* Retounen true si w gen dwa kontinye (gratis, oswa peye ak balans lan). */
 async function ensurePaid(o){
   if(isOwner()) return true;
-  const premium = (o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont));
+  const premium = (o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont));
   if(!premium) return true;
   if(!session || session.role!=='admin'){
     await showAlert('Estil sa a se yon fonksyon peye. Chwazi yon estil gratis, oswa mande administratè a pou l itilize l.');
@@ -3653,15 +3656,20 @@ function decoratePaidOptions(){
   };
   mark('#doc-template-select', FREE.docTemplates, fmtG(PRICES.doc)+' G');
   mark('#doc-font-select', FREE.fonts, fmtG(PRICES.fontDay)+' G/jou');
-  mark('select[data-print-style-key="bulletin"]', FREE.bulletinStyles, fmtG(PRICES.bulletin)+' G');
+  mark('select[data-print-style-key="bulletin"]', FREE.bulletinStyles, fmtG(PRICES.bulletin)+' G/elèv');
+  mark('select[data-print-style-key="palmares"]', FREE.palmaresStyles, fmtG(PRICES.palmares)+' G/klas');
 }
 /* Apèsi dokiman premium ki pa peye toujou gen yon filigran repete sou tout paj la,
    pou yon screenshot pa ka ranplase peman an. Filigran an pa parèt sou dokiman
-   ou enprime a (enprime a soti nan #print-area, pa nan apèsi a). */
+   ou enprime a (enprime a soti nan #print-area, pa nan apèsi a).
+   Chak zòn apèsi (dokiman, bilten, palmarès) mete pwòp bezwen peman li nan
+   atribi data-wm-obj (JSON), konsa yon sèl fonksyon jenerik ka jere yo tout. */
 function decoratePreviewWatermark(){
   const box = document.querySelector('.doc-preview-scroll');
   if(!box || !box.parentNode) return;
-  const locked = !isOwner() && paidNeeds({docTemplate:ui.docsTemplate, docFont:ui.docsFont}).length>0;
+  let wmObj = {};
+  try{ wmObj = JSON.parse(box.getAttribute('data-wm-obj')||'null') || {docTemplate:ui.docsTemplate, docFont:ui.docsFont}; }catch(e){ wmObj = {docTemplate:ui.docsTemplate, docFont:ui.docsFont}; }
+  const locked = !isOwner() && paidNeeds(wmObj).length>0;
   let wrap = (box.parentNode.classList && box.parentNode.classList.contains('wm-wrap')) ? box.parentNode : null;
   if(locked && !wrap){
     wrap = document.createElement('div'); wrap.className = 'wm-wrap';
@@ -3733,7 +3741,8 @@ function adminWallet(me){
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.book}</span><h3>Pri yo</h3></div>
     <div class="wal-price"><div><b>Modèl dokiman premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(DOC_TEMPLATES, FREE.docTemplates))}</span></div><div class="pr">${fmtG(PRICES.doc)} G / dokiman</div></div>
-    <div class="wal-price"><div><b>Estil bilten premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.bulletinStyles))}</span></div><div class="pr">${fmtG(PRICES.bulletin)} G / bilten</div></div>
+    <div class="wal-price"><div><b>Estil bilten premium</b> <span class="hint" style="margin:0">(endividyèl)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.bulletinStyles))}</span></div><div class="pr">${fmtG(PRICES.bulletin)} G / bilten / elèv</div></div>
+    <div class="wal-price"><div><b>Estil palmarès premium</b> <span class="hint" style="margin:0">(kolektif — tout klas)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.palmaresStyles))}</span></div><div class="pr">${fmtG(PRICES.palmares)} G / klas</div></div>
     <div class="wal-price"><div><b>Estil ekriti premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(DOC_FONTS, FREE.fonts))}</span></div><div class="pr">${fmtG(PRICES.fontDay)} G / jou</div></div>
   </div>
   <div class="card">
@@ -3772,6 +3781,12 @@ function adminOwnerPanel(me){
     <button type="button" class="btn btn-ghost btn-pill" id="own-back">← Retounen nan Balans</button>
   </div>
   <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.key}</span><h3>Konpare yon kòd NatCash</h3></div>
+    <p class="hint" style="text-align:left;margin-bottom:10px">Kole oswa tape egzakteman kòd tranzaksyon ki nan SMS NatCash ou resevwa a, pou wè si l koresponn ak yon demann ki soumèt nan app la — kit li an atant, deja aksepte, oswa rejte. Sa evite w verifye yon <b>fo kòd</b> oswa yon kòd ki deja itilize.</p>
+    <div class="field"><input id="own-search-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ex: 7XK92LP" value="${escapeHtml(ui.walSearchCode||'')}"></div>
+    <div id="own-search-results" style="margin-top:10px">${ownerSearchMatchHtml(ui.walSearchCode)}</div>
+  </div>
+  <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.wallet}</span><h3>An atant (${pending.length})</h3></div>
     ${pending.map(r=>row(r,true)).join('') || '<div class="empty-state">Okenn peman an atant.</div>'}
   </div>
@@ -3784,6 +3799,39 @@ function adminOwnerPanel(me){
     <div class="wal-uid" id="own-uid-text">${escapeHtml(myUid)}</div>
     <button type="button" class="btn btn-ghost btn-pill" id="own-copy-uid">Kopye UID</button>
   </div>`;
+}
+/* Konpare kòd SMS NatCash la ak tout demann ki soumèt nan app la (OWNER.list
+   gen tout demann, pa sèlman 20 dènye yo). Match egzat parèt an premye,
+   answit match pasyèl (an ka gen yon ti erè tape). Si okenn match, avèti
+   pwopriyetè a se ka yon fo kòd. */
+function ownerSearchMatchHtml(code){
+  const q = String(code||'').trim().toUpperCase();
+  if(!q) return `<p class="hint" style="text-align:left">Antre kòd la pou konpare l ak demann ki nan app la.</p>`;
+  const exact = OWNER.list.filter(r=>String(r.txid||'').toUpperCase().trim()===q);
+  const partial = OWNER.list.filter(r=>{
+    const t = String(r.txid||'').toUpperCase();
+    return t!==q && t.includes(q);
+  });
+  if(!exact.length && !partial.length){
+    return `<div class="wal-warn">⚠ Okenn demann nan app la pa gen kòd sa a. Si yon moun di li voye lajan ak kòd sa a, sa ka vle di se yon <b>FO KÒD</b> — pa verifye/aksepte okenn peman san w pa jwenn kòd egzat la nan lis anba a.</div>`;
+  }
+  const miniRow = (r)=>{
+    const dup = OWNER.list.filter(x=>x.id!==r.id && x.status!=='rejected' && String(x.txid||'').toUpperCase()===String(r.txid||'').toUpperCase());
+    return `
+    <div class="wal-req">
+      <div class="wal-req-top"><b>${fmtG(r.amount)} G</b><span class="wal-st wal-st-${escapeHtml(r.status||'pending')}">${walStatusLabel(r.status)}</span></div>
+      <div>${escapeHtml(r.name||'')}${r.email?' · '+escapeHtml(r.email):''}</div>
+      <div>Kòd nan app la : <b>${escapeHtml(r.txid||'')}</b> · Nimewo : ${escapeHtml(r.phone||'')}</div>
+      <div class="hint" style="text-align:left;margin:4px 0 0">${escapeHtml(walDate(r.createdAt))}</div>
+      ${r.status==='verified' ? '<div class="wal-sub" style="color:#1a7f37;font-weight:600">✓ Peman sa a deja verifye — konpare byen non/montan ak SMS ou a; menm kòd la pa dwe sèvi de fwa.</div>' : ''}
+      ${r.status==='rejected' ? `<div class="hint" style="text-align:left">Demann sa a te rejte${r.reason?' — '+escapeHtml(r.reason):''}.</div>` : ''}
+      ${dup.length>0 ? '<div class="wal-warn">⚠ Menm kòd sa a parèt sou plizyè demann — konpare non ak nimewo a byen anvan w verifye.</div>' : ''}
+    </div>`;
+  };
+  return `
+    ${exact.length ? `<div class="hint" style="text-align:left;color:#1a7f37;font-weight:600">✓ Kòd la jwenn nan app la (${exact.length}) :</div>${exact.map(miniRow).join('')}` : `<div class="wal-warn">⚠ Okenn match egzat pou kòd sa a — gade rezilta pwòch anba a, ou byen se ka yon fo kòd.</div>`}
+    ${partial.length ? `<div class="hint" style="text-align:left;margin-top:${exact.length?'12px':'8px'}">Rezilta pwòch (pa yon match 100%) :</div>${partial.map(miniRow).join('')}` : ''}
+  `;
 }
 async function ownerVerify(uid, id){
   const r = OWNER.list.find(x=>x.uid===uid && x.id===id);
@@ -4404,16 +4452,35 @@ function tabGrades(cls, role){
 function tabPalmares(cls){
   const term = ui.term || DATA.terms[0];
   const {ranked, unranked} = computeRanking(cls, term);
+  const palmaresStyleId = getPrintStyle('palmares');
+  const palmaresStyleLabel = (PRINT_STYLES.find(s=>s.id===palmaresStyleId)||{}).label || palmaresStyleId;
+  const palmaresPreviewBlock = ranked.length && ui.palmaresShowPreview ? `
+    <div class="card doc-preview-card" style="margin-top:16px">
+      <div class="card-head"><span class="ic-wrap">${ICONS.eye}</span><h3>Apèsi — Palmarès (${escapeHtml(palmaresStyleLabel)})</h3></div>
+      <p class="hint" style="text-align:left;margin-bottom:10px">Sa a se yon apèsi kolektif — yon sèl peman kouvri tout klas la si estil la peyan.</p>
+      <div class="doc-preview-scroll" data-wm-obj='${escapeHtml(JSON.stringify({palmaresStyle:palmaresStyleId}))}'>${buildPalmaresHtml(cls, term)}</div>
+    </div>` : '';
+  const bulletinStudentId = (ui.bulletinStudentId && cls.students.some(s=>s.id===ui.bulletinStudentId)) ? ui.bulletinStudentId : (cls.students[0] && cls.students[0].id) || null;
+  ui.bulletinStudentId = bulletinStudentId;
+  const bulletinStyleId = getPrintStyle('bulletin');
+  const bulletinStyleLabel = (PRINT_STYLES.find(s=>s.id===bulletinStyleId)||{}).label || bulletinStyleId;
+  const bulletinPreviewBlock = bulletinStudentId && ui.bulletinShowPreview ? `
+    <div class="card doc-preview-card" style="margin-top:16px">
+      <div class="card-head"><span class="ic-wrap">${ICONS.eye}</span><h3>Apèsi — Bilten (${escapeHtml(bulletinStyleLabel)})</h3></div>
+      <p class="hint" style="text-align:left;margin-bottom:10px">Sa a se yon apèsi endividyèl — peman an (si estil la peyan) se pou elèv sa a sèlman.</p>
+      <div class="doc-preview-scroll" data-wm-obj='${escapeHtml(JSON.stringify({bulletinStyle:bulletinStyleId}))}'>${buildBulletinHtml(cls, term, bulletinStudentId)}</div>
+    </div>` : '';
   return `
   ${ranked.length? podiumHtml(ranked) : ''}
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div class="card-head" style="margin:0"><span class="ic-wrap">${ICONS.trophy}</span><h3>Palmarès — ${escapeHtml(term)}</h3></div>
-      <div style="display:flex;gap:10px;align-items:center">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <select class="term-select" id="term-picker-2">
           ${DATA.terms.map(t=>`<option value="${escapeHtml(t)}" ${t===term?'selected':''}>${escapeHtml(t)}</option>`).join('')}
         </select>
         ${printStyleSelectHtml('palmares')}
+        <button class="btn-small" id="preview-palmares" type="button">${ICONS.eye}${ui.palmaresShowPreview?'Kache apèsi':'Apèsi'}</button>
         <button class="btn-small" id="print-palmares">${ICONS.printer}Enprime</button>
       </div>
     </div>
@@ -4436,20 +4503,23 @@ function tabPalmares(cls){
     `}
     ${unranked.length>0? `<p class="hint" style="text-align:left">Poko gen nòt: ${unranked.map(u=>escapeHtml(u.student.name)).join(', ')}</p>`:''}
   </div>
+  ${palmaresPreviewBlock}
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.printer}</span><h3>Bilten elèv</h3></div>
     <div class="inline-form">
       <div class="field" style="flex:2">
         <label>Chwazi yon elèv</label>
         <select id="bulletin-student">
-          ${cls.students.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
+          ${cls.students.map(s=>`<option value="${s.id}" ${s.id===bulletinStudentId?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}
         </select>
       </div>
       ${printStyleSelectHtml('bulletin')}
+      <button class="btn btn-ghost btn-pill" id="preview-bulletin" type="button">${ICONS.eye}${ui.bulletinShowPreview?'Kache apèsi':'Apèsi'}</button>
       <button class="btn btn-ghost btn-pill" id="print-bulletin">${ICONS.printer}Bilten — ${escapeHtml(term)}</button>
       <button class="btn btn-primary btn-pill" id="print-general-bulletin">${ICONS.printer}Bilten Jeneral (tout trimès)</button>
     </div>
-  </div>`;
+  </div>
+  ${bulletinPreviewBlock}`;
 }
 
 /* ===================== FICH ELÈV ===================== */
@@ -4646,7 +4716,10 @@ function setPrintOrientation(mode){
   const reset = ()=>{ tag.textContent=''; window.removeEventListener('afterprint', reset); };
   window.addEventListener('afterprint', reset);
 }
-function printPalmares(cls, term){
+/* buildXxxHtml() retounen sèlman HTML final la (renderPrintFrame), san okenn
+   efè segondè — sa pèmèt itilize menm rezilta a ni pou apèsi sou paj la
+   (doc-preview-scroll) ni pou #print-area lè n ap reyèlman enprime. */
+function buildPalmaresHtml(cls, term){
   const {ranked} = computeRanking(cls, term);
   const rows = ranked.map(r=>{
     const {sumPoints, totalMax} = studentGradeTotal(cls, term, r.student.id);
@@ -4664,18 +4737,22 @@ function printPalmares(cls, term){
         <thead><tr><th>Rang</th><th>Élève</th>${cls.subjects.map(s=>`<th>${escapeHtml(s.name)}<br><span style="font-weight:400">(/${s.coef})</span></th>`).join('')}<th>Total</th><th>Moyenne<br><span style="font-weight:400">${avgScaleLabel()}</span></th><th>Mention</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
-  document.getElementById('print-area').innerHTML = renderPrintFrame(getPrintStyle('palmares'), {
+  return renderPrintFrame(getPrintStyle('palmares'), {
     subtitle: `Palmarès — Classe ${escapeHtml(cls.name)} — ${escapeHtml(termFR(term))}`,
     metaRows: [[`Date d'impression : ${printDateStr()}`, `Total élèves classés : ${ranked.length}`]],
     bodyHtml,
     signHtml: printSignBlock()
   });
+}
+function printPalmares(cls, term){
+  document.getElementById('print-area').innerHTML = buildPalmaresHtml(cls, term);
   setPrintOrientation('landscape');
   triggerPrint('Palmares-'+cls.name);
 }
 
-function printBulletin(cls, term, studentId){
+function buildBulletinHtml(cls, term, studentId){
   const st = cls.students.find(s=>s.id===studentId);
+  if(!st) return '';
   const {ranked} = computeRanking(cls, term);
   const row = ranked.find(r=>r.student.id===studentId);
   const g = (cls.grades[term] && cls.grades[term][studentId]) || {};
@@ -4691,7 +4768,7 @@ function printBulletin(cls, term, studentId){
         <strong>Rang dans la classe :</strong> ${row? (row.rank+' / '+ranked.length) : '—'} &nbsp;&nbsp;
         <strong>Mention :</strong> ${row? mentionForFR(row.avg) : '—'}
       </div>`;
-  document.getElementById('print-area').innerHTML = renderPrintFrame(getPrintStyle('bulletin'), {
+  return renderPrintFrame(getPrintStyle('bulletin'), {
     subtitle: `Bulletin — ${escapeHtml(termFR(term))}`,
     metaRows: [
       [`Élève : <strong>${escapeHtml(st.name)}</strong>`, `Classe : ${escapeHtml(cls.name)}`],
@@ -4700,11 +4777,16 @@ function printBulletin(cls, term, studentId){
     bodyHtml,
     signHtml: printSignBlock()
   });
+}
+function printBulletin(cls, term, studentId){
+  const st = cls.students.find(s=>s.id===studentId);
+  document.getElementById('print-area').innerHTML = buildBulletinHtml(cls, term, studentId);
   triggerPrint('Bilten-'+st.name);
 }
 
-function printGeneralBulletin(cls, studentId){
+function buildGeneralBulletinHtml(cls, studentId){
   const st = cls.students.find(s=>s.id===studentId);
+  if(!st) return '';
   const perTerm = DATA.terms.map(t=>{
     const {ranked} = computeRanking(cls, t);
     const row = ranked.find(r=>r.student.id===studentId);
@@ -4734,7 +4816,7 @@ function printGeneralBulletin(cls, studentId){
         <strong>Moyenne Générale Annuelle ${avgScaleLabel()}:</strong> ${annualAvg!==null? fmtAvg(annualAvg) : '—'} &nbsp;&nbsp;
         <strong>Mention générale :</strong> ${annualAvg!==null? mentionForFR(annualAvg) : '—'}
       </div>`;
-  document.getElementById('print-area').innerHTML = renderPrintFrame(getPrintStyle('bulletin'), {
+  return renderPrintFrame(getPrintStyle('bulletin'), {
     subtitle: `Bulletin Général Annuel — Classe ${escapeHtml(cls.name)}`,
     metaRows: [
       [`Élève : <strong>${escapeHtml(st.name)}</strong>`, `Matricule : ${escapeHtml(st.matricule||'—')}`],
@@ -4743,6 +4825,10 @@ function printGeneralBulletin(cls, studentId){
     bodyHtml,
     signHtml: printSignBlock()
   });
+}
+function printGeneralBulletin(cls, studentId){
+  const st = cls.students.find(s=>s.id===studentId);
+  document.getElementById('print-area').innerHTML = buildGeneralBulletinHtml(cls, studentId);
   triggerPrint('Bilten-Jeneral-'+st.name);
 }
 
@@ -6035,6 +6121,12 @@ function wireEvents(view){
         const ok = await walCopy((fbAuth.currentUser && fbAuth.currentUser.uid) || '');
         showToast({title: ok?'UID kopye':'Kopi a pa mache', message: ok?'Kole l nan règ Firebase la.':'Kopye l manyèlman.'});
       });
+      const ownSearch = document.getElementById('own-search-code');
+      if(ownSearch) ownSearch.addEventListener('input', ()=>{
+        ui.walSearchCode = ownSearch.value;
+        const box = document.getElementById('own-search-results');
+        if(box) box.innerHTML = ownerSearchMatchHtml(ui.walSearchCode);
+      });
       document.querySelectorAll('[data-pay-ok]').forEach(b=>b.addEventListener('click', ()=>{ const [u,i]=b.dataset.payOk.split('|'); ownerVerify(u,i); }));
       document.querySelectorAll('[data-pay-no]').forEach(b=>b.addEventListener('click', ()=>{ const [u,i]=b.dataset.payNo.split('|'); ownerReject(u,i); }));
       const wf = document.getElementById('wal-form');
@@ -6685,19 +6777,41 @@ function wireClassManager(cls, role){
     });
   }
   else if(tab==='palmares'){
+    const rerender = ()=>{ role==='admin'? render('admin') : render('teacher'); };
     const tp2 = document.getElementById('term-picker-2');
-    if(tp2) tp2.addEventListener('change', ()=>{ ui.term = tp2.value; role==='admin'? render('admin') : render('teacher'); });
+    if(tp2) tp2.addEventListener('change', ()=>{ ui.term = tp2.value; rerender(); });
     const pb = document.getElementById('print-palmares');
-    if(pb) pb.addEventListener('click', ()=> printPalmares(cls, ui.term||DATA.terms[0]));
+    if(pb) pb.addEventListener('click', ()=>{
+      paidThen({palmaresStyle:getPrintStyle('palmares')}, ()=>{ printPalmares(cls, ui.term||DATA.terms[0]); });
+    });
+    const ppv = document.getElementById('preview-palmares');
+    if(ppv) ppv.addEventListener('click', ()=>{ ui.palmaresShowPreview = !ui.palmaresShowPreview; rerender(); });
+    const bs = document.getElementById('bulletin-student');
+    if(bs) bs.addEventListener('change', ()=>{ ui.bulletinStudentId = bs.value; rerender(); });
     const pbb = document.getElementById('print-bulletin');
     if(pbb) pbb.addEventListener('click', ()=>{
       const sid = document.getElementById('bulletin-student').value;
       paidThen({bulletinStyle:getPrintStyle('bulletin')}, ()=>{ printBulletin(cls, ui.term||DATA.terms[0], sid); });
     });
+    const bpv = document.getElementById('preview-bulletin');
+    if(bpv) bpv.addEventListener('click', ()=>{
+      ui.bulletinStudentId = document.getElementById('bulletin-student').value;
+      ui.bulletinShowPreview = !ui.bulletinShowPreview; rerender();
+    });
     const pgb = document.getElementById('print-general-bulletin');
     if(pgb) pgb.addEventListener('click', ()=>{
       const sid = document.getElementById('bulletin-student').value;
       paidThen({bulletinStyle:getPrintStyle('bulletin')}, ()=>{ printGeneralBulletin(cls, sid); });
+    });
+    /* Chanje estil (palmarès/bilten) rafrechi apèsi a si l ap afiche kounye a,
+       san sa pa afekte lòt vi kote menm klas selèkt la ka egziste. */
+    document.querySelectorAll('.print-style-select').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const key = sel.getAttribute('data-print-style-key');
+        setPrintStyle(key, sel.value); /* menm si delegasyon global la ap fè l tou, sa asire apèsi a li dènye chwa a */
+        if(key==='palmares' && ui.palmaresShowPreview) rerender();
+        else if(key==='bulletin' && ui.bulletinShowPreview) rerender();
+      });
     });
   }
   else if(tab==='fich'){
