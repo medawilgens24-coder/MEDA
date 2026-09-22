@@ -1736,24 +1736,63 @@ updateConnStatus();
    san okenn migrasyon, san pèdi done). Yon lekòl ki gen yon kòd (jenere
    lè yon moun eksplisitman kreye yon "lòt lekòl separe") viv nan pwòp
    branch pa l "schools/<kòd>", konplètman apa de lòt lekòl yo. ---- */
-function getSchoolId(){ try{ return localStorage.getItem('schoolId')||''; }catch(e){ return ''; } }
-function setSchoolId(id){ try{ if(id) localStorage.setItem('schoolId', id); else localStorage.removeItem('schoolId'); }catch(e){} }
+function getSchoolId(){ try{ const v=localStorage.getItem('schoolId'); return v===null ? null : v; }catch(e){ return null; } }
+function setSchoolId(id){ try{ localStorage.setItem('schoolId', id||''); }catch(e){} }
+function clearSchoolChoice(){ try{ localStorage.removeItem('schoolId'); }catch(e){} }
+function hasChosenSchool(){ return getSchoolId()!==null; }
 function schoolDataRefPath(){ const sid=getSchoolId(); return sid ? ('schools/'+sid) : 'schoolData'; }
-function schoolStorageKey(){ const sid=getSchoolId(); return sid ? ('schoolData_'+sid) : 'schoolData'; }
+function schoolStorageKeyFor(path){ return path==='schoolData' ? 'schoolData' : ('schoolData_'+String(path).replace(/[^a-zA-Z0-9_]/g,'_')); }
+function schoolStorageKey(){ return schoolStorageKeyFor(schoolDataRefPath()); }
+/* ---- Ti anyè global ki fè lyen ant yon kont Firebase (uid) ak lekòl
+   (schoolId) li fè pati a. Sa pèmèt YON SÈL aparèy jere PLIZYÈ kont/lekòl:
+   lè yon moun konekte ak yon kont ki pou yon lòt lekòl pase sa aparèy la
+   te sou li, sistèm nan chanje otomatikman pou l al chèche bon lekòl la,
+   olye l voye yon erè "pa gen pwofil". ---- */
+async function recordAdminSchool(uidVal){
+  if(!(FIREBASE_ENABLED && fbDb) || !uidVal) return;
+  try{ await fbDb.ref('adminSchool/'+uidVal).set(getSchoolId()||''); }catch(e){}
+}
+async function findSchoolIdForUid(uidVal){
+  if(!(FIREBASE_ENABLED && fbDb) || !uidVal) return null;
+  try{
+    const snap = await fbDb.ref('adminSchool/'+uidVal).get();
+    return snap.exists() ? snap.val() : null;
+  }catch(e){ return null; }
+}
+/* Chaje done lekòl ki koresponn ak yon uid, si sa diferan de lekòl aparèy
+   la sou li kounye a — retounen true si li reyisi swiche epi jwenn done. */
+async function switchToSchoolForUid(uidVal){
+  const otherId = await findSchoolIdForUid(uidVal);
+  if(otherId===null || otherId===getSchoolId()) return false;
+  const prevId = getSchoolId();
+  setSchoolId(otherId);
+  let loaded;
+  try{ loaded = await loadData(); }catch(e){ loaded = null; }
+  if(!loaded){ if(prevId===null) clearSchoolChoice(); else setSchoolId(prevId); return false; }
+  DATA = loaded;
+  normalizeLoadedData(DATA);
+  if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+  if(!DATA.avgScale) DATA.avgScale = 100;
+  migrateAcademicYears();
+  migrateTeacherProfiles();
+  ui.term = DATA.terms[0];
+  return true;
+}
 
 let DATA = null;
-async function loadData(){
+async function loadDataAtPath(path){
   if(FIREBASE_ENABLED && fbDb){
     try{
-      const snap = await fbDb.ref(schoolDataRefPath()).get();
+      const snap = await fbDb.ref(path).get();
       return snap.exists() ? snap.val() : null;
     }catch(e){ console.error('Erè Firebase pandan lekti done yo', e); return null; }
   }
   try{
-    const r = await window.storage.get(schoolStorageKey(), true);
+    const r = await window.storage.get(schoolStorageKeyFor(path), true);
     return r ? JSON.parse(r.value) : null;
   }catch(e){ return null; }
 }
+function loadData(){ return loadDataAtPath(schoolDataRefPath()); }
 /* Otowovgad: kenbe yon timer pou chak eleman, pou n ka anrejistre san n pa tann w kite chan an */
 const _debounceTimers = new WeakMap();
 function debounceSave(el, fn, delay){
@@ -2559,6 +2598,32 @@ async function boot(){
   /* Etabli omwen yon sesyon Firebase (anonim si se pa yon vrè kont) anvan
      nou eseye li done yo — Realtime Database a mande yon sesyon valab. */
   if(FIREBASE_ENABLED && fbAuth) await ensureBaselineAuth();
+  const alreadyAuthed = !!(FIREBASE_ENABLED && fbAuth && fbAuth.currentUser && !fbAuth.currentUser.isAnonymous);
+  if(!hasChosenSchool()){
+    if(alreadyAuthed){
+      /* Aparèy sa a gen deja yon sesyon administratè valid (te konekte anvan
+         sistèm "plizyè lekòl" la te egziste) — li dwe rete lye ak lekòl
+         prensipal la san okenn friksyon. */
+      setSchoolId('');
+    } else {
+      /* Aparèy TOUTAFÈ FRÈ (premye fwa): si gen yon lekòl ki DEJA konfigire
+         (ak omwen yon administratè) sou chemen prensipal "schoolData" la,
+         nou pa dwe rejwenn li otomatikman san pèmisyon — yon moun ki resevwa
+         menm fichye a pa ta dwe tonbe san l pa konnen sou done yon lòt
+         enstitisyon. Nou mande yo chwazi eksplisitman. */
+      const legacy = await loadDataAtPath('schoolData');
+      const legacyHasAdmins = !!(legacy && Array.isArray(legacy.admins) && legacy.admins.some(a=>a.uid));
+      if(legacyHasAdmins){
+        window.__pendingLegacyData = legacy;
+        const mode = await loadAppearance(); applyAppearance(mode); ui.appearance = mode;
+        const navMode = await loadNavStyle(); applyNavStyle(navMode); ui.navStyle = navMode;
+        render('schoolgate');
+        return;
+      }
+      /* Anyen pa konfigire ankò — se aparèy sa a k ap vin premye a. */
+      setSchoolId('');
+    }
+  }
   const loaded = await loadData();
   DATA = loaded || { schoolName:'', crestCode:'', admins:[], classes:[], terms:[...DEFAULT_TERMS] };
   normalizeLoadedData(DATA);
@@ -2579,11 +2644,16 @@ async function boot(){
      bezwen re-antre modpas li. */
   let restored = false;
   if(FIREBASE_ENABLED && fbAuth && fbAuth.currentUser && !fbAuth.currentUser.isAnonymous){
-    const rec = (DATA.admins||[]).find(a=>a.uid===fbAuth.currentUser.uid);
+    let rec = (DATA.admins||[]).find(a=>a.uid===fbAuth.currentUser.uid);
+    if(!rec){
+      const switched = await switchToSchoolForUid(fbAuth.currentUser.uid);
+      if(switched) rec = (DATA.admins||[]).find(a=>a.uid===fbAuth.currentUser.uid);
+    }
     if(rec){
       session = {role:'admin', classId:null, teacherId:null, adminUsername:rec.username};
       ui.adminView='akey';
       restored = true;
+      recordAdminSchool(fbAuth.currentUser.uid);
     }
   }
   render(restored ? 'admin' : 'login');
@@ -2591,6 +2661,7 @@ async function boot(){
 function render(view){
   const app = document.getElementById('app');
   if(view==='login') app.innerHTML = viewLogin();
+  else if(view==='schoolgate') app.innerHTML = viewSchoolGate();
   else if(view==='admin') app.innerHTML = viewAdmin();
   else if(view==='teacher') app.innerHTML = viewTeacher();
   wireEvents(view);
@@ -2603,6 +2674,25 @@ function render(view){
     decoratePaidOptions();
     decoratePreviewWatermark();
   }catch(e){ console.error('Balans/Peman', e); }
+}
+
+/* ===================== VIEW: CHWAZI LEKÒL (premye fwa sou yon aparèy) ===================== */
+function viewSchoolGate(){
+  const legacy = window.__pendingLegacyData || {};
+  const name = legacy.schoolName || (legacy.school && legacy.school.name) || 'yon lekòl';
+  return `
+  <div class="auth-page">
+    <div class="auth-brand"><div class="logo">${(legacy.school&&legacy.school.logo)?`<img src="${legacy.school.logo}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`:'M'}</div><span class="bn">Meda</span></div>
+    <div class="auth-wrap">
+      <div class="auth-card" style="max-width:420px">
+        <h2 style="font-size:19px;margin-bottom:10px">Kisa w vle fè?</h2>
+        <p class="hint" style="text-align:left;margin-bottom:18px">Aparèy sa a poko janm itilize ak yon lekòl. Nou jwenn yon lekòl ki deja konfigire sou sistèm nan : <strong>${escapeHtml(name)}</strong>.</p>
+        <button class="btn btn-primary btn-pill btn-block" id="gate-join-legacy" type="button" style="margin-bottom:10px">Mwen fè pati "${escapeHtml(name)}"</button>
+        <button class="btn btn-ghost btn-pill btn-block" id="gate-new-school" type="button" style="margin-bottom:10px">Kreye yon lòt lekòl toutafè separe</button>
+        <p class="hint" style="text-align:left;margin-top:6px">Si w gen yon Kòd Lekòl (pou konekte ak yon lekòl ki pa "${escapeHtml(name)}"), <a id="gate-use-code" style="cursor:pointer;color:var(--blue);font-weight:600">klike la a pou antre l</a>.</p>
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ===================== VIEW: LOGIN / SIGNUP ===================== */
@@ -5562,7 +5652,59 @@ function officialDocsView(){
 /* ===================== EVENTS ===================== */
 function wireEvents(view){
   bindPassToggles();
-  if(view==='login'){
+  if(view==='schoolgate'){
+    const joinBtn = document.getElementById('gate-join-legacy');
+    if(joinBtn) joinBtn.addEventListener('click', async ()=>{
+      setSchoolId('');
+      DATA = window.__pendingLegacyData || null;
+      if(DATA){
+        normalizeLoadedData(DATA);
+        if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+        if(!DATA.avgScale) DATA.avgScale = 100;
+        migrateAcademicYears();
+        migrateTeacherProfiles();
+        ui.term = DATA.terms[0];
+      }
+      render('login');
+    });
+    const newBtn = document.getElementById('gate-new-school');
+    if(newBtn) newBtn.addEventListener('click', async ()=>{
+      const conf = await showConfirm('Sa ap kreye yon LEKÒL TOUTAFÈ SEPARE, ak pwòp done pa li — li p ap genyen okenn done ki egziste deja. Kontinye?', {danger:true, okLabel:'Wi, kreye l'});
+      if(!conf) return;
+      const newCode = genCode();
+      setSchoolId(newCode);
+      DATA = { schoolName:'', crestCode:'', admins:[], classes:[], terms:[...DEFAULT_TERMS] };
+      normalizeLoadedData(DATA);
+      DATA.avgScale = 100;
+      ui.term = DATA.terms[0];
+      ui.authMode = 'signup'; ui.errors={};
+      await showAlert('Nouvo lekòl separe kreye ak kòd : '+newCode+'. Ekri kòd sa a yon kote — se li menm w ap bezwen pou konekte lòt aparèy ak MENM lekòl sa a pita (ou ka wè l tou nan Paramèt, apre w fin kreye kont ou).');
+      render('login');
+    });
+    const codeBtn = document.getElementById('gate-use-code');
+    if(codeBtn) codeBtn.addEventListener('click', async ()=>{
+      const code = await showPrompt('Ekri kòd lekòl la (6 karaktè):');
+      if(!code || !code.trim()) return;
+      const clean = code.trim().toUpperCase();
+      setSchoolId(clean);
+      let loaded;
+      try{ loaded = await loadData(); }catch(e){ loaded = null; }
+      if(!loaded){
+        clearSchoolChoice();
+        await showAlert('Pa gen okenn lekòl ak kòd sa a. Verifye kòd la.');
+        return;
+      }
+      DATA = loaded;
+      normalizeLoadedData(DATA);
+      if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+      if(!DATA.avgScale) DATA.avgScale = 100;
+      migrateAcademicYears();
+      migrateTeacherProfiles();
+      ui.term = DATA.terms[0];
+      render('login');
+    });
+  }
+  else if(view==='login'){
     document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click', ()=>{ ui.loginTab=b.dataset.tab; ui.errors={}; render('login'); }));
     document.querySelectorAll('[data-authmode]').forEach(b=>b.addEventListener('click', ()=>{ ui.authMode=b.dataset.authmode; ui.errors={}; render('login'); }));
 
@@ -5578,7 +5720,7 @@ function wireEvents(view){
         let loaded;
         try{ loaded = await loadData(); }catch(e){ loaded = null; }
         if(!loaded){
-          setSchoolId(prevId);
+          if(prevId===null) clearSchoolChoice(); else setSchoolId(prevId);
           await showAlert('Pa gen okenn lekòl ak kòd sa a. Verifye kòd la, oswa chwazi "Kreye yon nouvo lekòl separe" pito.');
           return;
         }
@@ -5617,16 +5759,24 @@ function wireEvents(view){
       if(btn) btn.disabled = true;
       try{
         const cred = await fbAuth.signInWithEmailAndPassword(email, p);
-        const rec = (DATA.admins||[]).find(a=>a.uid===cred.user.uid);
+        let rec = (DATA.admins||[]).find(a=>a.uid===cred.user.uid);
+        if(!rec){
+          /* Kont sa a ka fè pati yon LÒT lekòl aparèy sa a te deja itilize
+             oswa ka konekte ak — chèche l epi swiche otomatikman anvan nou
+             deklare erè. Sa pèmèt jere plizyè kont/lekòl san frikisyon. */
+          const switched = await switchToSchoolForUid(cred.user.uid);
+          if(switched) rec = (DATA.admins||[]).find(a=>a.uid===cred.user.uid);
+        }
         if(!rec){
           await fbAuth.signOut();
           await ensureBaselineAuth();
-          ui.errors.login='Kont sa a konekte, men pa gen okenn pwofil administratè ki asosye avè l pou lekòl sa a.';
+          ui.errors.login='Kont sa a konekte, men pa gen okenn pwofil administratè ki asosye avè l pou okenn lekòl.';
           render('login');
           return;
         }
         session = {role:'admin', classId:null, teacherId:null, adminUsername:rec.username};
         ui.adminView='akey'; ui.classDetailFor=null; ui.errors={};
+        recordAdminSchool(cred.user.uid);
         render('admin');
       }catch(err){
         ui.errors.login = firebaseAuthErrorMessage(err);
@@ -5662,6 +5812,7 @@ function wireEvents(view){
         if(!DATA.classes) DATA.classes=[];
         DATA.admins.push({id:uid(), name, username:user, email, uid:cred.user.uid});
         await saveData();
+        await recordAdminSchool(cred.user.uid);
         session = {role:'admin', classId:null, teacherId:null, adminUsername:user};
         ui.adminView='akey'; ui.classDetailFor=null; ui.errors={}; ui.term = DATA.terms[0];
         render('admin');
