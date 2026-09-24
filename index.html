@@ -1248,6 +1248,12 @@ function currentAdmin(){
    teacherId pa li. Konsa, menm moun nan pa janm double kèlkeswa konbyen
    klas/matyè/ane li anseye. */
 function ensureTeachers(){ if(!Array.isArray(DATA.teachers)) DATA.teachers=[]; return DATA.teachers; }
+/* Ti anyè "uid Firebase pwofesè → true" ki viv DIREKTEMAN nan done lekòl
+   la (schools/$schoolId/teacherUids). Li pèmèt règ sekirite Firebase yo
+   verifye "se vrèman yon pwofesè lekòl sa a k ap ekri", san yo pa bezwen
+   fouye nan tout tablo DATA.teachers la (Firebase Rules pa ka fè sa). */
+function ensureTeacherUids(){ if(!DATA.teacherUids || typeof DATA.teacherUids!=='object') DATA.teacherUids={}; return DATA.teacherUids; }
+function findTeacherByUid(uidVal){ return uidVal ? ensureTeachers().find(t=>t.uid===uidVal) : null; }
 function findTeacherById(id){ return id ? ensureTeachers().find(t=>t.id===id) : null; }
 function teacherDisplayName(t){
   if(!t) return '';
@@ -1296,6 +1302,8 @@ function findPossibleDuplicateTeachers({prenom, nom, phone, email}, excludeId){
    Administration ↔ li. Aksyon sa a se yon aksyon administratè sèlman. */
 function deleteTeacherById(teacherId){
   if(!teacherId) return;
+  const t = findTeacherById(teacherId);
+  if(t && t.uid && DATA.teacherUids) delete DATA.teacherUids[t.uid];
   DATA.teachers = ensureTeachers().filter(t=>t.id!==teacherId);
   const detach = c=>{
     if(c.teacherId===teacherId) c.teacherId=null;
@@ -2788,12 +2796,29 @@ function viewLogin(){
             </form>
           `}
         ` : `
-          <form id="login-teacher-form">
-            <div class="field"><label>Kòd pwofesè ou a</label><input id="l-code" required style="text-transform:uppercase" placeholder="Ex: 7F3K9Q"></div>
-            ${ui.errors.login? `<p class="error-msg">${ui.errors.login}</p>`:''}
-            <button class="btn btn-primary btn-pill btn-block" type="submit">Antre</button>
-          </form>
-          <p class="hint">Se yon sèl kòd pou tout klas ou yo. Mande administratè lekòl la kòd ou an si w pa genyen l.</p>
+          <div class="role-tabs">
+            <button class="role-tab ${authMode==='signin'?'active':''}" data-authmode="signin">Konekte</button>
+            <button class="role-tab ${authMode==='signup'?'active':''}" data-authmode="signup">Konfigire kont</button>
+          </div>
+          ${authMode==='signin' ? `
+            <form id="login-teacher-form">
+              <div class="field"><label>Imèl</label><input id="tl-email" type="email" required placeholder="jan@ekol.ht" autocomplete="username"></div>
+              ${passField('tl-pass','Kòd sekrè','required autocomplete="current-password"')}
+              ${ui.errors.login? `<p class="error-msg">${ui.errors.login}</p>`:''}
+              <button class="btn btn-primary btn-pill btn-block" type="submit">Antre</button>
+            </form>
+            <p class="hint" style="text-align:left;margin-top:10px">Premye fwa? Ou dwe <a id="teacher-goto-claim" style="cursor:pointer;color:var(--blue);font-weight:600">konfigire kont ou</a> ak kòd pwofesè a anvan.</p>
+          ` : `
+            <form id="teacher-claim-form">
+              <div class="field"><label>Kòd pwofesè ou a</label><input id="tc-code" required style="text-transform:uppercase" placeholder="Ex: 7F3K9Q"></div>
+              <div class="field"><label>Imèl</label><input id="tc-email" type="email" required placeholder="jan@ekol.ht" autocomplete="username"></div>
+              ${passField('tc-pass','Kòd sekrè (omwen 6 karaktè)','required autocomplete="new-password" minlength="6"')}
+              ${passField('tc-pass2','Konfime kòd sekrè','required autocomplete="new-password" minlength="6"')}
+              ${ui.errors.signup? `<p class="error-msg">${ui.errors.signup}</p>`:''}
+              <button class="btn btn-primary btn-pill btn-block" type="submit">Konfigire kont mwen</button>
+            </form>
+            <p class="hint" style="text-align:left;margin-top:10px">Sa a fèt <b>yon sèl fwa</b> — apre sa, itilize imèl + kòd sekrè pou konekte, pi rapid e pi an sekirite. Mande administratè lekòl la "Kòd pwofesè" a si w pa genyen l.</p>
+          `}
         `}
         <p class="hint" style="text-align:center;margin-top:14px"><a id="switch-school-link" style="cursor:pointer;color:var(--text-faint);font-weight:600">Ou gen yon kòd pou ajoute yon lòt administratè?</a></p>
       </div>
@@ -3098,6 +3123,7 @@ function teacherListInnerHtml(){
         <div class="class-card-meta">
           <span class="class-card-badge">${ICONS.grid}${classes.length} klas</span>
           <span class="code-chip">${t.code}</span>
+          ${t.uid ? `<span class="class-card-badge" style="color:#1E7E34">✓ Kont konfigire</span>` : `<span class="class-card-badge" style="color:#B3261E">⚠ Kont pa konfigire</span>`}
         </div>
         <div class="class-card-actions">
           <button class="btn-small" data-open-teacher="${t.id}">Wè pwofil / kòd</button>
@@ -5913,6 +5939,27 @@ function wireEvents(view){
       if(btn) btn.disabled = true;
       try{
         const cred = await fbAuth.signInWithEmailAndPassword(email, p);
+        /* IMPÒTAN: rechaje done lekòl la KOUNYE A, apre otantifikasyon an
+           fin reyisi. Anvan koneksyon an, aparèy la te ka sèlman gen yon
+           sesyon ANONIM (pa egzanp si app la fèk relanse apre yon
+           dekoneksyon) — si règ sekirite Firebase yo mande yon VRE kont
+           pou li done lekòl la, chajman ANONIM sa a echwe an silans e
+           DATA rete vid. San liy sa a, nou ta kontinye ap tcheke yon DATA
+           ki poko reyèlman reprezante lekòl la, epi nou ta di "pa gen
+           pwofil administratè" bay yon moun ki gen yon kont ki egziste
+           byen. Kounye a nou gen yon sesyon otantifye ak vrè dwa, nou
+           reyesèye chaje done yo anvan nou tcheke lis administratè yo. */
+        let reloaded;
+        try{ reloaded = await loadData(); }catch(e){ reloaded = null; }
+        if(reloaded){
+          DATA = reloaded;
+          normalizeLoadedData(DATA);
+          if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+          if(!DATA.avgScale) DATA.avgScale = 100;
+          migrateAcademicYears();
+          migrateTeacherProfiles();
+          ui.term = DATA.terms[0];
+        }
         let rec = (DATA.admins||[]).find(a=>a.uid===cred.user.uid);
         if(!rec){
           /* Kont sa a ka fè pati yon LÒT lekòl aparèy sa a te deja itilize
@@ -6005,16 +6052,78 @@ function wireEvents(view){
     });
 
     const tf = document.getElementById('login-teacher-form');
-    if(tf) tf.addEventListener('submit', e=>{
+    if(tf) tf.addEventListener('submit', async e=>{
       e.preventDefault();
-      const code = document.getElementById('l-code').value.trim().toUpperCase();
-      const teacher = ensureTeachers().find(t=>t.code===code);
-      if(teacher){
+      const email = document.getElementById('tl-email').value.trim();
+      const p = document.getElementById('tl-pass').value;
+      if(!FIREBASE_ENABLED || !fbAuth){ ui.errors.login=FIREBASE_INIT_ERROR || 'Firebase pa konfigire — enposib pou konekte.'; render('login'); return; }
+      const btn = tf.querySelector('button[type="submit"]');
+      if(btn) btn.disabled = true;
+      try{
+        const cred = await fbAuth.signInWithEmailAndPassword(email, p);
+        /* Menm koreksyon ke pou administratè yo: rechaje done yo APRE
+           otantifikasyon an reyisi, pa fè konfyans nan DATA ki te chaje
+           anvan (ki te ka chaje ak yon sesyon anonim ki pa t gen dwa
+           li tout bagay ankò). */
+        let reloaded;
+        try{ reloaded = await loadData(); }catch(e){ reloaded = null; }
+        if(reloaded){
+          DATA = reloaded;
+          normalizeLoadedData(DATA);
+          if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+          if(!DATA.avgScale) DATA.avgScale = 100;
+          migrateAcademicYears();
+          migrateTeacherProfiles();
+          ui.term = DATA.terms[0];
+        }
+        const teacher = findTeacherByUid(cred.user.uid);
+        if(!teacher){
+          await fbAuth.signOut();
+          await ensureBaselineAuth();
+          ui.errors.login='Kont sa a konekte, men li pa lye ak okenn pwofesè nan lekòl sa a.';
+          render('login');
+          return;
+        }
         const myClasses = classesForTeacher(teacher.id);
         session = {role:'teacher', teacherId:teacher.id, classId: myClasses[0]? myClasses[0].id : null};
         ui.teacherView='akey'; ui.classTab='eleve'; ui.term = DATA.terms[0]; ui.errors={};
         render('teacher');
-      } else { ui.errors.login='Kòd sa a pa koresponn ak okenn pwofesè.'; render('login'); }
+      }catch(err){
+        ui.errors.login = firebaseAuthErrorMessage(err);
+        render('login');
+      }
+    });
+    const tgc = document.getElementById('teacher-goto-claim');
+    if(tgc) tgc.addEventListener('click', ()=>{ ui.authMode='signup'; ui.errors={}; render('login'); });
+    const tcf = document.getElementById('teacher-claim-form');
+    if(tcf) tcf.addEventListener('submit', async e=>{
+      e.preventDefault();
+      if(!FIREBASE_ENABLED || !fbAuth){ ui.errors.signup=FIREBASE_INIT_ERROR || 'Firebase pa konfigire — enposib pou kreye kont.'; render('login'); return; }
+      const code = document.getElementById('tc-code').value.trim().toUpperCase();
+      const email = document.getElementById('tc-email').value.trim();
+      const pass = document.getElementById('tc-pass').value;
+      const pass2 = document.getElementById('tc-pass2').value;
+      if(!code){ ui.errors.signup='Ekri kòd pwofesè a.'; render('login'); return; }
+      if(!email||!pass){ ui.errors.signup='Ranpli tout chan yo.'; render('login'); return; }
+      if(pass.length<6){ ui.errors.signup='Kòd sekrè a dwe gen omwen 6 karaktè.'; render('login'); return; }
+      if(pass!==pass2){ ui.errors.signup='Kòd sekrè yo pa menm.'; render('login'); return; }
+      const teacher = ensureTeachers().find(t=>t.code===code);
+      if(!teacher){ ui.errors.signup='Kòd sa a pa koresponn ak okenn pwofesè nan lekòl sa a.'; render('login'); return; }
+      if(teacher.uid){ ui.errors.signup='Kont pou pwofesè sa a deja konfigire — itilize "Konekte" ak imèl ou pito.'; render('login'); return; }
+      try{
+        const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+        teacher.uid = cred.user.uid;
+        if(!teacher.email) teacher.email = email;
+        ensureTeacherUids()[cred.user.uid] = true;
+        await saveData();
+        const myClasses = classesForTeacher(teacher.id);
+        session = {role:'teacher', teacherId:teacher.id, classId: myClasses[0]? myClasses[0].id : null};
+        ui.teacherView='akey'; ui.classTab='eleve'; ui.term = DATA.terms[0]; ui.errors={};
+        render('teacher');
+      }catch(err){
+        ui.errors.signup = firebaseAuthErrorMessage(err);
+        render('login');
+      }
     });
   }
 
