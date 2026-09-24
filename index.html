@@ -1248,11 +1248,6 @@ function currentAdmin(){
    teacherId pa li. Konsa, menm moun nan pa janm double kèlkeswa konbyen
    klas/matyè/ane li anseye. */
 function ensureTeachers(){ if(!Array.isArray(DATA.teachers)) DATA.teachers=[]; return DATA.teachers; }
-/* Ti anyè "uid Firebase pwofesè → true" ki viv DIREKTEMAN nan done lekòl
-   la (schools/$schoolId/teacherUids). Li pèmèt règ sekirite Firebase yo
-   verifye "se vrèman yon pwofesè lekòl sa a k ap ekri", san yo pa bezwen
-   fouye nan tout tablo DATA.teachers la (Firebase Rules pa ka fè sa). */
-function ensureTeacherUids(){ if(!DATA.teacherUids || typeof DATA.teacherUids!=='object') DATA.teacherUids={}; return DATA.teacherUids; }
 function findTeacherByUid(uidVal){ return uidVal ? ensureTeachers().find(t=>t.uid===uidVal) : null; }
 function findTeacherById(id){ return id ? ensureTeachers().find(t=>t.id===id) : null; }
 function teacherDisplayName(t){
@@ -1302,8 +1297,6 @@ function findPossibleDuplicateTeachers({prenom, nom, phone, email}, excludeId){
    Administration ↔ li. Aksyon sa a se yon aksyon administratè sèlman. */
 function deleteTeacherById(teacherId){
   if(!teacherId) return;
-  const t = findTeacherById(teacherId);
-  if(t && t.uid && DATA.teacherUids) delete DATA.teacherUids[t.uid];
   DATA.teachers = ensureTeachers().filter(t=>t.id!==teacherId);
   const detach = c=>{
     if(c.teacherId===teacherId) c.teacherId=null;
@@ -1816,6 +1809,39 @@ async function findSchoolIdForUid(uidVal){
    la sou li kounye a — retounen true si li reyisi swiche epi jwenn done. */
 async function switchToSchoolForUid(uidVal){
   const otherId = await findSchoolIdForUid(uidVal);
+  if(otherId===null || otherId===getSchoolId()) return false;
+  const prevId = getSchoolId();
+  setSchoolId(otherId);
+  let loaded;
+  try{ loaded = await loadData(); }catch(e){ loaded = null; }
+  if(!loaded){ if(prevId===null) clearSchoolChoice(); else setSchoolId(prevId); return false; }
+  DATA = loaded;
+  normalizeLoadedData(DATA);
+  if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+  if(!DATA.avgScale) DATA.avgScale = 100;
+  migrateAcademicYears();
+  migrateTeacherProfiles();
+  ui.term = DATA.terms[0];
+  return true;
+}
+/* Menm mekanis lan, men pou PWOFESÈ yo: yon chemen SEPARE nan rasin
+   Firebase la (pa anndan schools/$schoolId), pou l pa gen okenn
+   dejandans sikilè ak done lekòl la — sa a se sa ki pèmèt règ sekirite
+   Firebase yo verifye "se yon pwofesè lekòl sa a" san yo pa bezwen
+   done sa yo deja ekri. */
+async function recordTeacherSchool(uidVal){
+  if(!(FIREBASE_ENABLED && fbDb) || !uidVal) return;
+  try{ await fbDb.ref('teacherSchool/'+uidVal).set(getSchoolId()||''); }catch(e){}
+}
+async function findSchoolIdForTeacherUid(uidVal){
+  if(!(FIREBASE_ENABLED && fbDb) || !uidVal) return null;
+  try{
+    const snap = await fbDb.ref('teacherSchool/'+uidVal).get();
+    return snap.exists() ? snap.val() : null;
+  }catch(e){ return null; }
+}
+async function switchToSchoolForTeacherUid(uidVal){
+  const otherId = await findSchoolIdForTeacherUid(uidVal);
   if(otherId===null || otherId===getSchoolId()) return false;
   const prevId = getSchoolId();
   setSchoolId(otherId);
@@ -6026,8 +6052,13 @@ function wireEvents(view){
         if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
         if(!DATA.classes) DATA.classes=[];
         DATA.admins.push({id:uid(), name, username:user, email, uid:cred.user.uid});
-        await saveData();
+        /* IMPÒTAN — LÒD LA KRITIK: dwe anrejistre adminSchool AVAN
+           saveData(), paske règ Firebase la egzije adminSchool egziste
+           DEJA anvan l kite nou ekri sou schools/$schoolId. Si w vèse
+           lòd sa a, premye saveData() la ap toujou echwe ak
+           PERMISSION_DENIED. */
         await recordAdminSchool(cred.user.uid);
+        await saveData();
         session = {role:'admin', classId:null, teacherId:null, adminUsername:user};
         ui.adminView='akey'; ui.classDetailFor=null; ui.errors={}; ui.term = DATA.terms[0]; ui.allowJoinSignup=false;
         render('admin');
@@ -6078,10 +6109,22 @@ function wireEvents(view){
         }
         const teacher = findTeacherByUid(cred.user.uid);
         if(!teacher){
-          await fbAuth.signOut();
-          await ensureBaselineAuth();
-          ui.errors.login='Kont sa a konekte, men li pa lye ak okenn pwofesè nan lekòl sa a.';
-          render('login');
+          /* Kont sa a ka fè pati yon LÒT lekòl aparèy sa a te deja itilize
+             oswa ka konekte ak — chèche l epi swiche otomatikman anvan nou
+             deklare erè, egzakteman jan nou fè l pou administratè yo. */
+          const switched = await switchToSchoolForTeacherUid(cred.user.uid);
+          const teacher2 = switched ? findTeacherByUid(cred.user.uid) : null;
+          if(!teacher2){
+            await fbAuth.signOut();
+            await ensureBaselineAuth();
+            ui.errors.login='Kont sa a konekte, men li pa lye ak okenn pwofesè nan okenn lekòl.';
+            render('login');
+            return;
+          }
+          const myClasses2 = classesForTeacher(teacher2.id);
+          session = {role:'teacher', teacherId:teacher2.id, classId: myClasses2[0]? myClasses2[0].id : null};
+          ui.teacherView='akey'; ui.classTab='eleve'; ui.term = DATA.terms[0]; ui.errors={};
+          render('teacher');
           return;
         }
         const myClasses = classesForTeacher(teacher.id);
@@ -6114,7 +6157,11 @@ function wireEvents(view){
         const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
         teacher.uid = cred.user.uid;
         if(!teacher.email) teacher.email = email;
-        ensureTeacherUids()[cred.user.uid] = true;
+        /* IMPÒTAN — LÒD LA KRITIK: menm jan ak admin yo, dwe anrejistre
+           teacherSchool AVAN saveData(), paske règ Firebase la egzije
+           mapaj sa a egziste DEJA anvan l kite nou ekri sou
+           schools/$schoolId. */
+        await recordTeacherSchool(cred.user.uid);
         await saveData();
         const myClasses = classesForTeacher(teacher.id);
         session = {role:'teacher', teacherId:teacher.id, classId: myClasses[0]? myClasses[0].id : null};
