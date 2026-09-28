@@ -1227,6 +1227,22 @@ function passField(id, label, extraAttrs){
     </div>
   </div>`;
 }
+/* Verifye kòd sekrè kont lan (rekonfimasyon Firebase) anvan yon chanjman imèl.
+   Retounen true si kòd la bon, sinon montre yon mesaj epi retounen false. */
+async function verifyPasswordForEmailChange(pass){
+  if(!pass){ await showAlert('Pou chanje imèl ou, ekri kòd sekrè ou te kreye kont lan avè l la.'); return false; }
+  if(!FIREBASE_ENABLED || !fbAuth || !fbAuth.currentUser || !fbAuth.currentUser.email){
+    await showAlert('Ou dwe konekte pou chanje imèl ou.'); return false;
+  }
+  try{
+    const credential = firebase.auth.EmailAuthProvider.credential(fbAuth.currentUser.email, pass);
+    await fbAuth.currentUser.reauthenticateWithCredential(credential);
+    return true;
+  }catch(err){
+    await showAlert(err && err.code==='auth/wrong-password' ? 'Kòd sekrè a pa bon. Imèl la pa chanje.' : firebaseAuthErrorMessage(err));
+    return false;
+  }
+}
 function bindPassToggles(){
   document.querySelectorAll('[data-pass-toggle]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -3249,7 +3265,7 @@ function adminTeacherDetail(teacher){
       <div class="field"><label>Prenon</label><input id="et-prenom" value="${escapeHtml(teacher.prenom||'')}"></div>
       <div class="field"><label>Non fanmi</label><input id="et-nom" value="${escapeHtml(teacher.nom||'')}"></div>
       <div class="field"><label>Telefòn</label><input id="et-phone" value="${escapeHtml(teacher.phone||'')}"></div>
-      <div class="field"><label>Imèl</label><input id="et-email" type="email" value="${escapeHtml(teacher.email||'')}"></div>
+      <div class="field"><label>Imèl (sèlman pwofesè a ka chanje l)</label><input id="et-email" type="email" value="${escapeHtml(teacher.email||'')}" readonly disabled style="opacity:.75"></div>
       <div class="field"><label>Adrès</label><input id="et-address" value="${escapeHtml(teacher.address||'')}"></div>
       <div class="field"><label>Fonksyon / Pòs</label><input id="et-poste" value="${escapeHtml(teacher.poste||'')}"></div>
       <div class="field"><label>Diplòm / Fòmasyon</label><input id="et-diplome" value="${escapeHtml(teacher.diplome||'')}"></div>
@@ -3368,6 +3384,7 @@ function adminProfile(me){
     <form id="profile-form" class="inline-form">
       <div class="field"><label>Non w</label><input id="pf-name" value="${escapeHtml(me.name)}" required></div>
       <div class="field"><label>Imèl</label><input id="pf-email" type="email" value="${escapeHtml(me.email||'')}" placeholder="imèl ou (opsyonèl)"></div>
+      ${passField('pf-pass','Kòd sekrè ou (obligatwa sèlman si w chanje imèl)','autocomplete="current-password"')}
       <button class="btn btn-primary btn-pill" type="submit">Anrejistre chanjman yo</button>
     </form>
   </div>`;
@@ -4297,6 +4314,7 @@ function teacherProfileView(teacher){
       <div class="field"><label>Dat nesans (opsyonèl)</label><input id="tp-dob" type="date" value="${escapeHtml(tp.dob||'')}"></div>
       <div class="field"><label>Telefòn</label><input id="tp-phone" value="${escapeHtml(tp.phone||'')}"></div>
       <div class="field"><label>Imèl</label><input id="tp-email" type="email" value="${escapeHtml(tp.email||'')}"></div>
+      ${passField('tp-pass','Kòd sekrè ou (obligatwa sèlman si w chanje imèl)','autocomplete="current-password"')}
       <div class="field"><label>Adrès</label><input id="tp-address" value="${escapeHtml(tp.address||'')}"></div>
       <div class="field"><label>Fonksyon / Pòs</label><input id="tp-poste" value="${escapeHtml(tp.poste||'')}" placeholder="Ex: Titilè, Pwofesè matyè"></div>
       <div class="field"><label>Diplòm / Fòmasyon</label><input id="tp-diplome" value="${escapeHtml(tp.diplome||'')}"></div>
@@ -6295,7 +6313,6 @@ function wireEvents(view){
         teacher.prenom = document.getElementById('et-prenom').value.trim();
         teacher.nom = document.getElementById('et-nom').value.trim();
         teacher.phone = document.getElementById('et-phone').value.trim();
-        teacher.email = document.getElementById('et-email').value.trim();
         teacher.address = document.getElementById('et-address').value.trim();
         teacher.poste = document.getElementById('et-poste').value.trim();
         teacher.diplome = document.getElementById('et-diplome').value.trim();
@@ -6324,9 +6341,13 @@ function wireEvents(view){
         const rec = DATA.admins.find(a=>a.username===me.username);
         if(rec){
           const newName = document.getElementById('pf-name').value.trim();
+          const newEmail = document.getElementById('pf-email').value.trim();
+          if(newEmail !== (rec.email||'')){
+            if(!await verifyPasswordForEmailChange(document.getElementById('pf-pass').value)) return;
+          }
           if(newName && newName!==rec.name && !await showConfirm(`Chanje non ou pou "${newName}"?`)) return;
           rec.name = newName || rec.name;
-          rec.email = document.getElementById('pf-email').value.trim();
+          rec.email = newEmail;
           await saveData();
         }
         render('admin');
@@ -6831,12 +6852,16 @@ function wireEvents(view){
       });
       document.getElementById('teacher-profile-form').addEventListener('submit', async e=>{
         e.preventDefault();
+        const newTpEmail = document.getElementById('tp-email').value.trim();
+        if(newTpEmail !== (tp.email||'')){
+          if(!await verifyPasswordForEmailChange(document.getElementById('tp-pass').value)) return;
+        }
         tp.prenom = document.getElementById('tp-prenom').value.trim();
         tp.nom = document.getElementById('tp-nom').value.trim();
         tp.sexe = document.getElementById('tp-sexe').value;
         tp.dob = document.getElementById('tp-dob').value;
         tp.phone = document.getElementById('tp-phone').value.trim();
-        tp.email = document.getElementById('tp-email').value.trim();
+        tp.email = newTpEmail;
         tp.address = document.getElementById('tp-address').value.trim();
         tp.poste = document.getElementById('tp-poste').value.trim();
         tp.diplome = document.getElementById('tp-diplome').value.trim();
