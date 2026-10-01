@@ -208,6 +208,13 @@
   .card-head{display:flex;align-items:center;gap:11px;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line-soft);}
   .card-head .ic-wrap{width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--blue-soft),var(--blue-soft) 60%,rgba(24,119,242,.18));color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .card-head h3{margin:0;font-family:'Fraunces',Georgia,serif;font-size:16px;color:var(--text);font-weight:700;line-height:1.3;letter-spacing:-.005em;}
+  .acc-card .card-head{cursor:pointer;margin-bottom:0;border-bottom:none;user-select:none;}
+  .acc-card .card-head h3{flex:1;}
+  .acc-card .card-head .acc-chevron{flex-shrink:0;transition:transform .18s ease;color:var(--text-soft,#8a8d91);display:flex;}
+  .acc-card.open .card-head{margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line-soft);}
+  .acc-card.open .card-head .acc-chevron{transform:rotate(180deg);}
+  .acc-card .acc-body{display:none;}
+  .acc-card.open .acc-body{display:block;}
   .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
   .stat-box{background:var(--card);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow);padding:16px 16px 15px;position:relative;overflow:hidden;transition:transform .15s ease,box-shadow .15s ease;}
   .stat-box::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--gold));}
@@ -1242,6 +1249,35 @@ async function verifyPasswordForEmailChange(pass){
     await showAlert(err && err.code==='auth/wrong-password' ? 'Kòd sekrè a pa bon. Imèl la pa chanje.' : firebaseAuthErrorMessage(err));
     return false;
   }
+}
+/* Fè kat (.card) nan yon paj vin akòdeyon: yo pliye pa default, yo plisye lè w klike
+   sou tèt la (.card-head). openFirst: id (string) kat ki dwe rete plisye pa default. */
+function setupAccordion(root, openFirst){
+  if(!root) return;
+  root.querySelectorAll(':scope > .card').forEach((card, i)=>{
+    const head = card.querySelector(':scope > .card-head');
+    if(!head) return;
+    if(!head.querySelector('.acc-chevron')){
+      const chev = document.createElement('span');
+      chev.className = 'acc-chevron';
+      chev.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+      head.appendChild(chev);
+    }
+    let body = card.querySelector(':scope > .acc-body');
+    if(!body){
+      body = document.createElement('div');
+      body.className = 'acc-body';
+      const rest = Array.from(card.children).filter(c=>c!==head);
+      rest.forEach(el=>body.appendChild(el));
+      card.appendChild(body);
+    }
+    card.classList.add('acc-card');
+    if(openFirst!=null && i===openFirst) card.classList.add('open');
+    if(!head.dataset.accBound){
+      head.dataset.accBound = '1';
+      head.addEventListener('click', ()=>{ card.classList.toggle('open'); });
+    }
+  });
 }
 function bindPassToggles(){
   document.querySelectorAll('[data-pass-toggle]').forEach(btn=>{
@@ -6518,6 +6554,7 @@ function wireEvents(view){
       if(ui.msgTeacherId && !ui.msgShowProfile) wireMessageThread(ui.msgTeacherId, 'admin', ()=>render('admin'));
     }
     if(ui.adminView==='paramet'){
+      setupAccordion(document.querySelector('.fb-main'), 0);
       const copyCodeBtn = document.getElementById('copy-school-code');
       if(copyCodeBtn) copyCodeBtn.addEventListener('click', async ()=>{
         const ok = await helpCopyText(getSchoolId());
@@ -6840,6 +6877,7 @@ function wireEvents(view){
       wireMessageThread(teacher.id, 'teacher', ()=>render('teacher'));
     }
     if(ui.teacherView==='pwofil'){
+      setupAccordion(document.querySelector('.fb-main'), 0);
       const tp = teacher;
       document.getElementById('teacher-username-form').addEventListener('submit', async e=>{
         e.preventDefault();
