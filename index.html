@@ -21,6 +21,12 @@
     --red:#E4433D;
     --gold:#C79A3B;
     --green:#42B72A;
+    --purple:#7C5CDB;
+    --purple-soft:#EFE9FC;
+    --teal:#0E9A8B;
+    --teal-soft:#E2F5F2;
+    --gold-soft:#FBF1DD;
+    --green-soft:#E8F8E3;
     --radius:8px;
     --shadow:0 1px 2px rgba(0,0,0,.08), 0 1px 6px rgba(0,0,0,.06);
     --shadow-pop:0 12px 28px rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.1);
@@ -220,8 +226,21 @@
   .stat-box::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--gold));}
   .stat-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-pop);}
   .stat-box .stat-ic{width:34px;height:34px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+  .stat-box.sb-green::before{background:linear-gradient(90deg,var(--green),#8CE07A);}
+  .stat-box.sb-green .stat-ic{background:var(--green-soft);color:var(--green);}
+  .stat-box.sb-purple::before{background:linear-gradient(90deg,var(--purple),#B6A2EE);}
+  .stat-box.sb-purple .stat-ic{background:var(--purple-soft);color:var(--purple);}
+  .stat-box.sb-teal::before{background:linear-gradient(90deg,var(--teal),#6BD1C4);}
+  .stat-box.sb-teal .stat-ic{background:var(--teal-soft);color:var(--teal);}
+  .stat-box.sb-gold::before{background:linear-gradient(90deg,var(--gold),#E6C878);}
+  .stat-box.sb-gold .stat-ic{background:var(--gold-soft);color:var(--gold);}
   .stat-box .num{font-family:'Fraunces',Georgia,serif;font-size:27px;color:var(--text);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
   .stat-box .lbl{font-size:12px;color:var(--text-soft);margin-top:6px;line-height:1.4;text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+  .dash-avg-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .dash-avg-gauge{position:relative;width:98px;height:98px;flex-shrink:0;}
+  .dash-avg-gauge canvas{width:100% !important;height:100% !important;}
+  .dash-avg-gauge .gauge-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+  .chart-wrap{position:relative;width:100%;}
 
   /* ============ CLASS CARDS (no horizontal scroll ever) ============ */
   .class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;}
@@ -979,6 +998,7 @@
      Vèsyon "compat" la chwazi expre paske li mache dirèkteman ak yon senp
      balis "script" HTML, san bezwen bundler/module.
      ========================================================================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -1278,6 +1298,58 @@ function setupAccordion(root, openFirst){
       head.addEventListener('click', ()=>{ card.classList.toggle('open'); });
     }
   });
+}
+/* Grafik reyèl (Chart.js) pou dashboard admin lan: ti wonn pou mwayèn jeneral la
+   ak yon grafik liy pou evolisyon pa trimès. Detwi ansyen enstans anvan chak
+   re-render pou evite bug "Canvas is already in use". */
+window._dashCharts = window._dashCharts || {};
+function destroyDashChart(key){
+  if(window._dashCharts[key]){ window._dashCharts[key].destroy(); delete window._dashCharts[key]; }
+}
+function renderDashboardCharts(){
+  if(typeof Chart==='undefined') return;
+  const term = ui.term || DATA.terms[0];
+  const stats = schoolWideStats(term);
+  const evo = termEvolutionData();
+  const scaleMax = DATA.avgScale===10 ? 10 : 100;
+
+  const gaugeEl = document.getElementById('dash-avg-gauge-canvas');
+  destroyDashChart('gauge');
+  if(gaugeEl && stats.nbGraded>0){
+    const val = Math.max(0, Math.min(scaleMax, stats.globalAvg||0));
+    window._dashCharts.gauge = new Chart(gaugeEl.getContext('2d'), {
+      type:'doughnut',
+      data:{ datasets:[{ data:[val, Math.max(0,scaleMax-val)], backgroundColor:['#1877F2','#E7F0FE'], borderWidth:0 }] },
+      options:{ cutout:'74%', rotation:-90, circumference:360, plugins:{legend:{display:false},tooltip:{enabled:false}}, animation:{duration:600} }
+    });
+  }
+
+  const evoEl = document.getElementById('dash-evo-canvas');
+  destroyDashChart('evo');
+  if(evoEl && evo.length>0){
+    window._dashCharts.evo = new Chart(evoEl.getContext('2d'), {
+      type:'line',
+      data:{
+        labels: evo.map(e=>e.term),
+        datasets:[{
+          label:'Mwayèn',
+          data: evo.map(e=>e.avg),
+          borderColor:'#1877F2', backgroundColor:'rgba(24,119,242,.12)',
+          borderWidth:2.5, fill:true, tension:.35, pointRadius:4,
+          pointBackgroundColor:'#1877F2', pointBorderColor:'#fff', pointBorderWidth:2
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          y:{ beginAtZero:true, max:scaleMax, grid:{color:'#E4E6EA'}, ticks:{font:{size:11}} },
+          x:{ grid:{display:false}, ticks:{font:{size:11}} }
+        },
+        animation:{duration:600}
+      }
+    });
+  }
 }
 function bindPassToggles(){
   document.querySelectorAll('[data-pass-toggle]').forEach(btn=>{
@@ -2996,10 +3068,10 @@ function adminHome(me){
   </div>
   <div class="stat-row">
     <div class="stat-box"><div class="stat-ic">${ICONS.grid}</div><div class="num">${nbClasses}</div><div class="lbl">Klas</div></div>
-    <div class="stat-box"><div class="stat-ic">${ICONS.users}</div><div class="num">${nbStudents}</div><div class="lbl">Elèv antou</div></div>
-    <div class="stat-box"><div class="stat-ic">${ICONS.idcard}</div><div class="num">${stats.nbTeachers}</div><div class="lbl">Pwofesè</div></div>
-    <div class="stat-box"><div class="stat-ic">${ICONS.book}</div><div class="num">${stats.nbSubjects}</div><div class="lbl">Matyè</div></div>
-    <div class="stat-box"><div class="stat-ic">${ICONS.idcard}</div><div class="num">${(DATA.admins||[]).length}</div><div class="lbl">Kont administratè</div></div>
+    <div class="stat-box sb-green"><div class="stat-ic">${ICONS.users}</div><div class="num">${nbStudents}</div><div class="lbl">Elèv antou</div></div>
+    <div class="stat-box sb-purple"><div class="stat-ic">${ICONS.idcard}</div><div class="num">${stats.nbTeachers}</div><div class="lbl">Pwofesè</div></div>
+    <div class="stat-box sb-teal"><div class="stat-ic">${ICONS.book}</div><div class="num">${stats.nbSubjects}</div><div class="lbl">Matyè</div></div>
+    <div class="stat-box sb-gold"><div class="stat-ic">${ICONS.idcard}</div><div class="num">${(DATA.admins||[]).length}</div><div class="lbl">Kont administratè</div></div>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px">
@@ -3009,8 +3081,11 @@ function adminHome(me){
       </select>
     </div>
     ${stats.nbGraded===0 ? `<div class="empty-state">Okenn done disponib</div>` : `
-    <div class="dash-avg-big">${fmtAvg(stats.globalAvg)} ${avgScaleLabel()}</div>
-    <div class="dash-avg-sub">Kalkile sou ${stats.nbGraded} elèv ki gen nòt antre pou trimès sa a.</div>`}
+    <div class="dash-avg-wrap">
+      <div class="dash-avg-gauge"><canvas id="dash-avg-gauge-canvas"></canvas><div class="gauge-label">${fmtAvg(stats.globalAvg)}</div></div>
+      <div><div class="dash-avg-big">${fmtAvg(stats.globalAvg)} ${avgScaleLabel()}</div>
+      <div class="dash-avg-sub">Kalkile sou ${stats.nbGraded} elèv ki gen nòt antre pou trimès sa a.</div></div>
+    </div>`}
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.trophy}</span><h3>Pi bon elèv — ${escapeHtml(term)}</h3></div>
@@ -3035,12 +3110,7 @@ function adminHome(me){
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.chart}</span><h3>Evolisyon pa trimès</h3></div>
-    ${evo.length===0 ? `<div class="empty-state">Okenn done disponib</div>` : evo.map(e=>`
-      <div class="hist-row">
-        <div class="term-evol-label">${escapeHtml(e.term)}</div>
-        <div class="hist-track"><div class="hist-fill" style="width:${Math.round((e.avg/maxEvo)*100)}%"></div></div>
-        <div class="hist-count">${fmtAvg(e.avg)}</div>
-      </div>`).join('')}
+    ${evo.length===0 ? `<div class="empty-state">Okenn done disponib</div>` : `<div class="chart-wrap" style="height:190px"><canvas id="dash-evo-canvas"></canvas></div>`}
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.list}</span><h3>Apèsi rapid</h3></div>
@@ -6245,6 +6315,7 @@ function wireEvents(view){
       }));
       const tpd = document.getElementById('term-picker-dash');
       if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
+      renderDashboardCharts();
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
