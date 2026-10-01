@@ -2566,8 +2566,7 @@ function schoolHeaderMetaHtml(){
   return bits.length ? `<div class="p-school-meta">${bits.join(' &nbsp;·&nbsp; ')}</div>` : '';
 }
 function printSignBlock(){
-  const s = ensureSchool();
-  return `<div class="p-sign"><div>Signature du Professeur</div><div>Signature de la Direction${s.director? '<br>'+escapeHtml(s.director) : ''}</div></div>`;
+  return `<div class="p-sign"><div>Signature du Professeur</div><div style="border-top:none;padding-top:0">${directorSignatureHtml()}</div></div>`;
 }
 function printDateStr(){ return new Date().toLocaleDateString('fr-FR'); }
 
@@ -3676,11 +3675,13 @@ function dataCleanupHtml(){
 const OWNER_EMAIL = 'medawilgens24@gmail.com';
 const NATCASH_RAW = '+50943011194';
 const NATCASH_DISPLAY = '+509 4301 1194';
-const PRICES = { doc:2.5, bulletin:5, palmares:15, fontDay:10 };
+const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10 };
 /* Gratis = premye yo nan lis la. Chanje lis sa yo si w vle chanje sa ki gratis.
    bulletinStyles = peman ENDIVIDYÈL (chak bilten se pou 1 sèl elèv).
-   palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv). */
-const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'] };
+   palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv).
+   docTypes vid (san anyen ladan) = CHAK tip dokiman ofisyèl (sètifika,
+   atestasyon, elatriye) peye pa inite, kèlkeswa modèl/koulè/ekriti chwazi. */
+const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
 const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
@@ -3811,6 +3812,7 @@ async function walletSpend(kind, amount){
 }
 function paidNeeds(o){
   const needs=[];
+  if(o.docType && !FREE.docTypes.includes(o.docType)) needs.push({kind:'doctype', amount:PRICES.docType, label:'Dokiman ofisyèl — '+docTypeById(o.docType).label});
   if(o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) needs.push({kind:'doc', amount:PRICES.doc, label:'Modèl dokiman premium'});
   if(o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) needs.push({kind:'bulletin', amount:PRICES.bulletin, label:'Estil bilten premium (1 elèv)'});
   if(o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) needs.push({kind:'palmares', amount:PRICES.palmares, label:'Estil palmarès premium (tout klas la)'});
@@ -3818,7 +3820,7 @@ function paidNeeds(o){
   return needs;
 }
 function isPremiumSel(o){
-  return !!((o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont)));
+  return !!((o.docType && !FREE.docTypes.includes(o.docType)) || (o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont)));
 }
 /* Kouri fn() (enprime a) apre verifikasyon peman an. Lè pa gen anyen pou peye
    (estil gratis, pwopriyetè, oswa pas 24è aktif), fn() kouri IMEDYATMAN nan menm klik la,
@@ -3833,7 +3835,7 @@ function paidThen(o, fn){
 /* Retounen true si w gen dwa kontinye (gratis, oswa peye ak balans lan). */
 async function ensurePaid(o){
   if(isOwner()) return true;
-  const premium = (o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont));
+  const premium = (o.docType && !FREE.docTypes.includes(o.docType)) || (o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) || (o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) || (o.palmaresStyle && !FREE.palmaresStyles.includes(o.palmaresStyle)) || (o.docFont && !FREE.fonts.includes(o.docFont));
   if(!premium) return true;
   if(!session || session.role!=='admin'){
     await showAlert('Estil sa a se yon fonksyon peye. Chwazi yon estil gratis, oswa mande administratè a pou l itilize l.');
@@ -3875,6 +3877,7 @@ function decoratePaidOptions(){
       o.dataset.paidMarked = '1';
     });
   };
+  mark('#doc-type-select', FREE.docTypes, fmtG(PRICES.docType)+' G');
   mark('#doc-template-select', FREE.docTemplates, fmtG(PRICES.doc)+' G');
   mark('#doc-font-select', FREE.fonts, fmtG(PRICES.fontDay)+' G/jou');
   mark('select[data-print-style-key="bulletin"]', FREE.bulletinStyles, fmtG(PRICES.bulletin)+' G/elèv');
@@ -3961,6 +3964,7 @@ function adminWallet(me){
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.book}</span><h3>Pri yo</h3></div>
+    <div class="wal-price"><div><b>Dokiman ofisyèl</b> <span class="hint" style="margin:0">(chak sètifika/atestasyon)</span><br><span class="wal-sub">Chak dokiman ofisyèl jenere peye, kèlkeswa modèl/koulè chwazi</span></div><div class="pr">${fmtG(PRICES.docType)} G / inite</div></div>
     <div class="wal-price"><div><b>Modèl dokiman premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(DOC_TEMPLATES, FREE.docTemplates))}</span></div><div class="pr">${fmtG(PRICES.doc)} G / dokiman</div></div>
     <div class="wal-price"><div><b>Estil bilten premium</b> <span class="hint" style="margin:0">(endividyèl)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.bulletinStyles))}</span></div><div class="pr">${fmtG(PRICES.bulletin)} G / bilten / elèv</div></div>
     <div class="wal-price"><div><b>Estil palmarès premium</b> <span class="hint" style="margin:0">(kolektif — tout klas)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.palmaresStyles))}</span></div><div class="pr">${fmtG(PRICES.palmares)} G / klas</div></div>
@@ -5968,7 +5972,7 @@ function officialDocsView(){
       <div class="card doc-preview-card" style="margin-top:20px">
         <div class="card-head"><span class="ic-wrap">${ICONS.eye}</span><h3>Apèsi — Modèl ${escapeHtml(tpl.label)}</h3></div>
         <div id="doc-stale-note" class="hint" style="display:${ui.docsPreviewed?'none':'block'};color:#b45309;margin-bottom:10px">Ou fè chanjman — klike "Apèsi" ankò pou wè yo nan apèsi a.</div>
-        <div class="doc-preview-scroll">${renderOfficialDocHtml(cls, st, ui.docsTitle, ui.docsBody, tpl.id, color.id, font.id)}</div>
+        <div class="doc-preview-scroll" data-wm-obj='${escapeHtml(JSON.stringify({docType:type.id, docTemplate:tpl.id, docFont:font.id}))}'>${renderOfficialDocHtml(cls, st, ui.docsTitle, ui.docsBody, tpl.id, color.id, font.id)}</div>
       </div>` : '';
 
     inner = `
@@ -6908,7 +6912,7 @@ function wireEvents(view){
         const cls = findClass(ui.docsClassId);
         const st = cls && (cls.students||[]).find(s=>s.id===ui.docsStudentId);
         if(!cls || !st) return;
-        paidThen({docTemplate:ui.docsTemplate, docFont:ui.docsFont}, ()=>{
+        paidThen({docType:ui.docsType, docTemplate:ui.docsTemplate, docFont:ui.docsFont}, ()=>{
           printOfficialDocument(cls, st, ui.docsTitle, ui.docsBody, ui.docsTemplate, ui.docsColor, ui.docsFont);
         });
       });
