@@ -1295,7 +1295,12 @@ function setupAccordion(root, openFirst){
     if(openFirst!=null && i===openFirst) card.classList.add('open');
     if(!head.dataset.accBound){
       head.dataset.accBound = '1';
-      head.addEventListener('click', ()=>{ card.classList.toggle('open'); });
+      head.addEventListener('click', ()=>{
+        card.classList.toggle('open');
+        /* Si gen grafik Chart.js anndan kat la (dashboard lan), yo te ka gen
+           gwosè 0 paske kat la te kache lè yo te kreye — resize yo lè kat la louvri. */
+        if(window._dashCharts) Object.values(window._dashCharts).forEach(c=>{ try{ c.resize(); }catch(e){} });
+      });
     }
   });
 }
@@ -6320,6 +6325,7 @@ function wireEvents(view){
       const tpd = document.getElementById('term-picker-dash');
       if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
       renderDashboardCharts();
+      setupAccordion(document.querySelector('.fb-main'), -1);
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
