@@ -75,17 +75,40 @@
   .msg-avatar{width:48px;height:48px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;overflow:hidden;}
   .msg-avatar.sm{width:38px;height:38px;font-size:13px;}
   .msg-thread{flex:1;min-width:0;}
-  .msg-thread-head{display:flex;align-items:center;gap:12px;padding:4px 4px 14px;cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:14px;}
+  .msg-thread-head{display:flex;align-items:center;gap:12px;padding:6px 8px 14px;cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:14px;}
+  .msg-thread-head:hover{background:var(--line-soft);border-radius:10px 10px 0 0;}
   .msg-thread-head .nm{font-weight:700;font-size:15px;color:var(--text);}
   .msg-thread-head .sub{font-size:12px;color:var(--blue);font-weight:600;}
   .msg-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;margin-bottom:12px;}
   .msg-bubbles{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding:6px 2px;margin-bottom:12px;}
-  .msg-bubble{max-width:100%;padding:9px 13px;border-radius:12px;font-size:14px;line-height:1.5;min-width:0;}
-  .msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:3px;}
-  .msg-bubble.theirs{align-self:flex-start;background:#F0F2F5;color:var(--text);border-bottom-left-radius:3px;}
-  .msg-bubble .meta{display:block;font-size:10.5px;opacity:.75;margin-top:4px;}
-  .msg-compose{display:flex;gap:8px;}
-  .msg-compose textarea{flex:1;resize:none;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;}
+  .msg-bubble{max-width:100%;padding:9px 13px;border-radius:15px;font-size:14px;line-height:1.5;min-width:0;box-shadow:0 1px 2px rgba(0,0,0,.07);}
+  .msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
+  .msg-bubble.theirs{align-self:flex-start;background:#F0F2F5;color:var(--text);border-bottom-left-radius:4px;}
+  .msg-bubble .meta{display:flex;align-items:center;gap:4px;font-size:10.5px;opacity:.75;margin-top:4px;}
+  .msg-ticks{display:inline-flex;align-items:flex-end;gap:2px;flex-shrink:0;}
+  .msg-ticks .tkb{width:3px;border-radius:2px;background:rgba(255,255,255,.8);}
+  .msg-ticks .tkb:nth-child(1){height:7px;}
+  .msg-ticks .tkb:nth-child(2){height:10px;}
+  .msg-ticks.delivered .tkb{background:#FF5A5F;}
+  .msg-ticks.read .tkb{background:#8ED1FF;}
+  .msg-photo{display:block;max-width:240px;max-height:260px;width:100%;border-radius:11px;margin-bottom:6px;cursor:zoom-in;object-fit:cover;}
+  .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
+  .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  .msg-bubble.photo-only{padding:5px;background:transparent;box-shadow:none;}
+  .msg-bubble.photo-only.mine .meta{color:var(--text);opacity:.65;padding:0 4px;}
+  .msg-bubble.photo-only.mine .msg-ticks .tkb{background:var(--text-soft);}
+  .msg-bubble.photo-only.mine .msg-ticks.delivered .tkb{background:#E0393F;}
+  .msg-bubble.photo-only.mine .msg-ticks.read .tkb{background:#1877F2;}
+  .msg-compose{display:flex;gap:8px;align-items:flex-end;background:var(--card,#fff);border:1px solid var(--line);border-radius:22px;padding:7px 7px 7px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:border-color .15s ease,box-shadow .15s ease;}
+  .msg-compose:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,119,242,.12);}
+  .msg-compose textarea{flex:1;resize:none;min-height:38px;max-height:120px;padding:8px 0;border:none;outline:none;background:transparent;font-size:14px;font-family:inherit;color:var(--text);}
+  .msg-compose .btn-pill{border-radius:50%;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .msg-compose .btn-pill .ic{margin:0;}
+  .msg-attach-btn{background:transparent;border:none;color:var(--text-soft);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+  .msg-attach-btn:hover{background:var(--line-soft);color:var(--blue);}
+  .msg-compose-preview{position:relative;display:inline-flex;margin:0 0 8px;}
+  .msg-compose-preview img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
+  .msg-compose-preview button{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#1a1a2e;color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .msg-row{display:flex;align-items:flex-end;gap:7px;max-width:84%;align-self:flex-start;min-width:0;}
   .msg-row.mine{flex-direction:row-reverse;align-self:flex-end;}
   .msg-row-av{width:24px;height:24px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff;}
@@ -1022,6 +1045,10 @@ const FIREBASE_CONFIG = {
   measurementId:     "G-D26059DET9"
 };
 const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('REMPLASE') && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('REMPLASE'));
+/* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
+   kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
+   tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
+const APP_VERSION = '1.1';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1553,10 +1580,20 @@ function renderMsgBubble(m, role, teacher){
   }
   const label = mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration');
   const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifié à ${fmtTimeOnly(m.editedAt)}</span>` : '';
+  const photoOnly = m.photo && !m.text;
+  const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
+  const ticksHtml = mine ? msgStatusTicksHtml(m) : '';
   return `<div class="msg-row ${mine?'mine':''}">
     ${msgRowAvatarHtml(av)}
-    <div class="msg-bubble ${mine?'mine':'theirs'}" data-msg-id="${m.id}">${escapeHtml(m.text)}<span class="meta">${label} · ${fmtMsgTime(m.ts)}${editedTag}</span></div>
+    <div class="msg-bubble ${mine?'mine':'theirs'}${photoOnly?' photo-only':''}" data-msg-id="${m.id}">${photoHtml}${escapeHtml(m.text)}<span class="meta">${label} · ${fmtMsgTime(m.ts)}${editedTag}${ticksHtml}</span></div>
   </div>`;
+}
+/* Ba estati mesaj la: 1 ba = voye, 2 ba wouj = livre (poko li), 2 ba ble = li.
+   Parèt sèlman sou mesaj PA MWEN YO (menm jan tout app messaj fè l). */
+function msgStatusTicksHtml(m){
+  if(m.read) return `<span class="msg-ticks read" title="Li"><span class="tkb"></span><span class="tkb"></span></span>`;
+  if(m.delivered) return `<span class="msg-ticks delivered" title="Livre — poko li"><span class="tkb"></span><span class="tkb"></span></span>`;
+  return `<span class="msg-ticks sent" title="Voye"><span class="tkb"></span></span>`;
 }
 /* Sheet actions ki parèt lè yo tape sou yon mesaj */
 function renderMsgActionSheet(teacherId, role, teacher){
@@ -1582,6 +1619,14 @@ function renderMsgActionSheet(teacherId, role, teacher){
 }
 /* Branche tout evenman popup/aksyon/edit pou yon konvèsasyon (itilize pou admin ak pwofesè) */
 function wireMessageThread(teacherId, role, rerender){
+  document.querySelectorAll('[data-msg-photo-view]').forEach(img=>img.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const overlay = document.createElement('div');
+    overlay.className = 'img-lightbox';
+    overlay.innerHTML = `<img src="${img.getAttribute('src')}" alt="Foto">`;
+    overlay.addEventListener('click', ()=>overlay.remove());
+    document.body.appendChild(overlay);
+  }));
   document.querySelectorAll('[data-msg-id]').forEach(el=>el.addEventListener('click', (e)=>{
     e.stopPropagation();
     const id = el.dataset.msgId;
@@ -2977,6 +3022,7 @@ function viewLogin(){
         <p class="hint" style="text-align:center;margin-top:14px"><a id="switch-school-link" style="cursor:pointer;color:var(--text-faint);font-weight:600">Ou gen yon kòd pou ajoute yon lòt administratè?</a></p>
       </div>
     </div>
+    <p class="hint" style="text-align:center;margin-top:18px;opacity:.55">v${APP_VERSION}</p>
   </div>`;
 }
 
@@ -3551,9 +3597,12 @@ function adminMessageThread(teacher){
   <div class="msg-bubbles" id="msg-bubbles">
     ${msgs.length? msgs.map(m=>renderMsgBubble(m,'admin',teacher)).join('') : '<div class="empty-state">Pa gen mesaj nan konvèsasyon sa a toujou.</div>'}
   </div>
+  ${ui.msgComposePhoto ? `<div class="msg-compose-preview"><img src="${ui.msgComposePhoto}" alt="Apèsi foto"><button type="button" id="msg-compose-photo-remove">&times;</button></div>` : ''}
   <form id="msg-compose-form" class="msg-compose">
-    <textarea id="msg-compose-text" placeholder="Ekri yon mesaj pou ${escapeHtml(teacherDisplayName(teacher)||'pwofesè a')}..." required></textarea>
-    <button class="btn btn-primary btn-pill" type="submit">${ICONS.send}Voye</button>
+    <label class="msg-attach-btn" for="msg-compose-photo-input" title="Voye yon foto">${ICONS.camera}</label>
+    <input type="file" id="msg-compose-photo-input" accept="image/*" style="display:none">
+    <textarea id="msg-compose-text" placeholder="Ekri yon mesaj pou ${escapeHtml(teacherDisplayName(teacher)||'pwofesè a')}..."></textarea>
+    <button class="btn btn-primary btn-pill" type="submit" aria-label="Voye">${ICONS.send}</button>
   </form>
   ${renderMsgActionSheet(teacher.id,'admin',teacher)}`;
 }
@@ -4316,7 +4365,8 @@ function adminSettings(){
       ${passField('del-acc-pass','Antre kòd sekrè ou pou konfime','placeholder="••••••••" autocomplete="current-password" required')}
       <button class="btn btn-danger-outline btn-pill" type="submit">${ICONS.trash}Efase kont mwen an pou tout tan</button>
     </form>
-  </div>`;
+  </div>
+  <p class="hint" style="text-align:center;margin-top:6px;opacity:.55">Vèsyon app la : v${APP_VERSION}</p>`;
 }
 
 /* ===================== VIEW: TEACHER ===================== */
@@ -4381,9 +4431,12 @@ function teacherMessages(teacher){
     <div class="msg-bubbles" id="msg-bubbles">
       ${msgs.length? msgs.map(m=>renderMsgBubble(m,'teacher',teacher)).join('') : '<div class="empty-state">Pa gen mesaj toujou. Voye yon mesaj bay administration.</div>'}
     </div>
+    ${ui.msgComposePhoto ? `<div class="msg-compose-preview"><img src="${ui.msgComposePhoto}" alt="Apèsi foto"><button type="button" id="msg-compose-photo-remove">&times;</button></div>` : ''}
     <form id="msg-compose-form" class="msg-compose">
-      <textarea id="msg-compose-text" placeholder="Ekri yon mesaj bay administration..." required></textarea>
-      <button class="btn btn-primary btn-pill" type="submit">${ICONS.send}Voye</button>
+      <label class="msg-attach-btn" for="msg-compose-photo-input" title="Voye yon foto bay administratè a">${ICONS.camera}</label>
+      <input type="file" id="msg-compose-photo-input" accept="image/*" style="display:none">
+      <textarea id="msg-compose-text" placeholder="Ekri yon mesaj bay administration..."></textarea>
+      <button class="btn btn-primary btn-pill" type="submit" aria-label="Voye">${ICONS.send}</button>
     </form>
     ${renderMsgActionSheet(teacher.id,'teacher',teacher)}
   </div>`;
@@ -6589,7 +6642,7 @@ function wireEvents(view){
     }
     if(ui.adminView==='mesaj'){
       document.querySelectorAll('[data-msg-teacher]').forEach(b=>b.addEventListener('click', ()=>{
-        ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; render('admin');
+        ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; ui.msgComposePhoto=null; render('admin');
       }));
       const backBtn = document.querySelector('[data-msg-back]');
       if(backBtn) backBtn.addEventListener('click', ()=>{ ui.msgTeacherId=null; ui.msgShowProfile=false; render('admin'); });
@@ -6620,14 +6673,29 @@ function wireEvents(view){
         const unreadMsgs = ensureMessages().filter(m=>m.teacherId===ui.msgTeacherId && m.sender==='teacher' && !m.read);
         if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveData(); }
       }
+      const photoInput = document.getElementById('msg-compose-photo-input');
+      if(photoInput) photoInput.addEventListener('change', async ()=>{
+        const file = photoInput.files && photoInput.files[0];
+        if(!file) return;
+        try{ ui.msgComposePhoto = await resizeImageToDataUrl(file, 900, 0.68, 'image/jpeg'); render('admin'); }
+        catch(e){ await showAlert('Pa t kapab chaje foto sa a. Eseye yon lòt imaj.'); }
+      });
+      const photoRemove = document.getElementById('msg-compose-photo-remove');
+      if(photoRemove) photoRemove.addEventListener('click', ()=>{ ui.msgComposePhoto = null; render('admin'); });
       const cf = document.getElementById('msg-compose-form');
       if(cf) cf.addEventListener('submit', async e=>{
         e.preventDefault();
         const ta = document.getElementById('msg-compose-text');
         const text = ta.value.trim();
-        if(!text) return;
-        ensureMessages().push({id:uid(), teacherId:ui.msgTeacherId, sender:'admin', senderUsername:currentAdmin().username, text, ts:Date.now(), read:false, editedAt:null, deletedFor:[], deletedForEveryone:false});
+        const photo = ui.msgComposePhoto || null;
+        if(!text && !photo) return;
+        const msg = {id:uid(), teacherId:ui.msgTeacherId, sender:'admin', senderUsername:currentAdmin().username, text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
+        ensureMessages().push(msg);
+        ui.msgComposePhoto = null;
+        render('admin');
         await saveData();
+        msg.delivered = true;
+        saveData();
         render('admin');
       });
       const bub = document.getElementById('msg-bubbles');
@@ -6943,14 +7011,29 @@ function wireEvents(view){
     if(ui.teacherView==='mesaj'){
       const unreadMsgs = ensureMessages().filter(m=>m.teacherId===teacher.id && m.sender==='admin' && !m.read);
       if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveData(); }
+      const photoInput = document.getElementById('msg-compose-photo-input');
+      if(photoInput) photoInput.addEventListener('change', async ()=>{
+        const file = photoInput.files && photoInput.files[0];
+        if(!file) return;
+        try{ ui.msgComposePhoto = await resizeImageToDataUrl(file, 900, 0.68, 'image/jpeg'); render('teacher'); }
+        catch(e){ await showAlert('Pa t kapab chaje foto sa a. Eseye yon lòt imaj.'); }
+      });
+      const photoRemove = document.getElementById('msg-compose-photo-remove');
+      if(photoRemove) photoRemove.addEventListener('click', ()=>{ ui.msgComposePhoto = null; render('teacher'); });
       const cf = document.getElementById('msg-compose-form');
       if(cf) cf.addEventListener('submit', async e=>{
         e.preventDefault();
         const ta = document.getElementById('msg-compose-text');
         const text = ta.value.trim();
-        if(!text) return;
-        ensureMessages().push({id:uid(), teacherId:teacher.id, sender:'teacher', text, ts:Date.now(), read:false, editedAt:null, deletedFor:[], deletedForEveryone:false});
+        const photo = ui.msgComposePhoto || null;
+        if(!text && !photo) return;
+        const msg = {id:uid(), teacherId:teacher.id, sender:'teacher', text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
+        ensureMessages().push(msg);
+        ui.msgComposePhoto = null;
+        render('teacher');
         await saveData();
+        msg.delivered = true;
+        saveData();
         render('teacher');
       });
       const bub = document.getElementById('msg-bubbles');
