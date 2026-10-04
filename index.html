@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Meda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Playfair+Display:wght@600;700&family=Nunito:wght@500;700&family=Roboto+Condensed:wght@500;700&display=swap" rel="stylesheet">
@@ -81,6 +84,10 @@
   .msg-thread-head .sub{font-size:12px;color:var(--blue);font-weight:600;}
   .msg-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;margin-bottom:12px;}
   .msg-bubbles{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding:6px 2px;margin-bottom:12px;}
+  .online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-left:5px;vertical-align:middle;box-shadow:0 0 0 2px rgba(66,183,42,.2);}
+  .verified-badge{display:inline-block;vertical-align:middle;margin-left:4px;flex-shrink:0;}
+  .msg-day-sep{display:flex;justify-content:center;margin:12px 0 4px;}
+  .msg-day-sep span{background:#E7ECF3;color:var(--text-soft);font-size:11.5px;font-weight:600;padding:4px 13px;border-radius:50px;text-transform:capitalize;}
   @keyframes msgRowIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
   .msg-row{animation:msgRowIn .22s ease both;}
   .btn-spinner{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:btnspin .6s linear infinite;margin-right:7px;vertical-align:-3px;opacity:.85;}
@@ -275,7 +282,7 @@
   .stat-box .lbl{font-size:12px;color:var(--text-soft);margin-top:6px;line-height:1.4;text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
   .dash-avg-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
   .dash-avg-gauge{position:relative;width:98px;height:98px;flex-shrink:0;}
-  .dash-avg-gauge canvas{width:100% !important;height:100% !important;}
+  .dash-avg-gauge svg{display:block;}
   .dash-avg-gauge .gauge-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
   .chart-wrap{position:relative;width:100%;}
 
@@ -1035,7 +1042,6 @@
      Vèsyon "compat" la chwazi expre paske li mache dirèkteman ak yon senp
      balis "script" HTML, san bezwen bundler/module.
      ========================================================================== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -1062,7 +1068,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.5';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1349,64 +1355,49 @@ function setupAccordion(root, openFirst){
       head.dataset.accBound = '1';
       head.addEventListener('click', ()=>{
         card.classList.toggle('open');
-        /* Si gen grafik Chart.js anndan kat la (dashboard lan), yo te ka gen
-           gwosè 0 paske kat la te kache lè yo te kreye — resize yo lè kat la louvri. */
-        if(window._dashCharts) Object.values(window._dashCharts).forEach(c=>{ try{ c.resize(); }catch(e){} });
       });
     }
   });
 }
-/* Grafik reyèl (Chart.js) pou dashboard admin lan: ti wonn pou mwayèn jeneral la
-   ak yon grafik liy pou evolisyon pa trimès. Detwi ansyen enstans anvan chak
-   re-render pou evite bug "Canvas is already in use". */
-window._dashCharts = window._dashCharts || {};
-function destroyDashChart(key){
-  if(window._dashCharts[key]){ window._dashCharts[key].destroy(); delete window._dashCharts[key]; }
+/* Grafik dashboard admin lan (ti wonn mwayèn jeneral la ak liy evolisyon pa
+   trimès la) fèt an SVG senp, san okenn lib ekstèn — konsa yo toujou parèt
+   kòrèkteman menm si pa gen bon koneksyon entènèt nan moman an, e yo pa gen
+   pwoblèm gwosè 0 lè yo kreye anndan yon kat ki kache. */
+function gaugeSvg(val, scaleMax){
+  const r = 42, c = 2*Math.PI*r;
+  const frac = Math.max(0, Math.min(1, (val||0)/(scaleMax||1)));
+  const off = c*(1-frac);
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+    <circle cx="50" cy="50" r="${r}" fill="none" stroke="#E7F0FE" stroke-width="10"/>
+    <circle cx="50" cy="50" r="${r}" fill="none" stroke="#1877F2" stroke-width="10"
+      stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+      transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .5s ease"/>
+  </svg>`;
 }
-function renderDashboardCharts(){
-  if(typeof Chart==='undefined') return;
-  const term = ui.term || DATA.terms[0];
-  const stats = schoolWideStats(term);
-  const evo = termEvolutionData();
-  const scaleMax = DATA.avgScale===10 ? 10 : 100;
-
-  const gaugeEl = document.getElementById('dash-avg-gauge-canvas');
-  destroyDashChart('gauge');
-  if(gaugeEl && stats.nbGraded>0){
-    const val = Math.max(0, Math.min(scaleMax, stats.globalAvg||0));
-    window._dashCharts.gauge = new Chart(gaugeEl.getContext('2d'), {
-      type:'doughnut',
-      data:{ datasets:[{ data:[val, Math.max(0,scaleMax-val)], backgroundColor:['#1877F2','#E7F0FE'], borderWidth:0 }] },
-      options:{ cutout:'74%', rotation:-90, circumference:360, plugins:{legend:{display:false},tooltip:{enabled:false}}, animation:{duration:600} }
-    });
-  }
-
-  const evoEl = document.getElementById('dash-evo-canvas');
-  destroyDashChart('evo');
-  if(evoEl && evo.length>0){
-    window._dashCharts.evo = new Chart(evoEl.getContext('2d'), {
-      type:'line',
-      data:{
-        labels: evo.map(e=>e.term),
-        datasets:[{
-          label:'Mwayèn',
-          data: evo.map(e=>e.avg),
-          borderColor:'#1877F2', backgroundColor:'rgba(24,119,242,.12)',
-          borderWidth:2.5, fill:true, tension:.35, pointRadius:4,
-          pointBackgroundColor:'#1877F2', pointBorderColor:'#fff', pointBorderWidth:2
-        }]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{
-          y:{ beginAtZero:true, max:scaleMax, grid:{color:'#E4E6EA'}, ticks:{font:{size:11}} },
-          x:{ grid:{display:false}, ticks:{font:{size:11}} }
-        },
-        animation:{duration:600}
-      }
-    });
-  }
+function evoLineSvg(evo, scaleMax){
+  const w=320, h=180, padL=4, padR=4, padT=18, padB=24;
+  const plotW=w-padL-padR, plotH=h-padT-padB, n=evo.length;
+  const pts = evo.map((e,i)=>{
+    const x = padL + (n<=1 ? plotW/2 : (i/(n-1))*plotW);
+    const frac = Math.max(0, Math.min(1, (e.avg||0)/(scaleMax||1)));
+    const y = padT + plotH - frac*plotH;
+    return {x, y, term:e.term, avg:e.avg};
+  });
+  const pathD = pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+  const areaD = `${pathD} L${pts[pts.length-1].x.toFixed(1)},${(padT+plotH).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
+  const gridLines = [0,.25,.5,.75,1].map(f=>{
+    const y = padT + plotH*f;
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="#E4E6EA" stroke-width="1"/>`;
+  }).join('');
+  const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#1877F2" stroke="#fff" stroke-width="2"/>`).join('');
+  const valueLabels = pts.map(p=>`<text x="${p.x.toFixed(1)}" y="${(p.y-10).toFixed(1)}" font-size="10.5" font-weight="700" fill="#1877F2" text-anchor="middle">${escapeHtml(fmtAvg(p.avg))}</text>`).join('');
+  const termLabels = pts.map(p=>`<text x="${p.x.toFixed(1)}" y="${h-8}" font-size="10" fill="#65676B" text-anchor="middle">${escapeHtml(p.term)}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="190" preserveAspectRatio="none">
+    ${gridLines}
+    <path d="${areaD}" fill="rgba(24,119,242,.12)" stroke="none"/>
+    <path d="${pathD}" fill="none" stroke="#1877F2" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}${valueLabels}${termLabels}
+  </svg>`;
 }
 function bindPassToggles(){
   document.querySelectorAll('[data-pass-toggle]').forEach(btn=>{
@@ -1555,6 +1546,27 @@ function teacherMessagesList(teacherId){ return ensureMessages().filter(m=>m.tea
 function unreadFromTeacher(teacherId){ return ensureMessages().filter(m=>m.teacherId===teacherId && m.sender==='teacher' && !m.read).length; }
 function unreadFromAdmin(teacherId){ return ensureMessages().filter(m=>m.teacherId===teacherId && m.sender==='admin' && !m.read).length; }
 function totalUnreadForAdmin(){ return teachersForMessaging().reduce((sum,t)=>sum+unreadFromTeacher(t.id),0); }
+/* Etikèt separatè jou a (jan WhatsApp fè l): "Jodi a", "Yè", oswa dat la an
+   antye si se pi lwen pase sa. */
+function fmtDayLabel(ts){
+  const d = new Date(ts), now = new Date();
+  const startOf = x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diffDays = Math.round((startOf(now)-startOf(d))/86400000);
+  if(diffDays===0) return 'Jodi a';
+  if(diffDays===1) return 'Yè';
+  return d.toLocaleDateString('fr-FR',{weekday:'long', day:'numeric', month:'long', year: d.getFullYear()!==now.getFullYear() ? 'numeric' : undefined});
+}
+/* Bati lis bul mesaj yo ak yon ti chip dat chak fwa jou a chanje. */
+function msgBubblesWithDatesHtml(msgs, role, teacher){
+  let lastDay = null, out = '';
+  msgs.forEach(m=>{
+    const d = new Date(m.ts);
+    const dayKey = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
+    if(dayKey!==lastDay){ out += `<div class="msg-day-sep"><span>${escapeHtml(fmtDayLabel(m.ts))}</span></div>`; lastDay = dayKey; }
+    out += renderMsgBubble(m, role, teacher);
+  });
+  return out;
+}
 function fmtMsgTime(ts){ const d=new Date(ts); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function fmtTimeOnly(ts){ return new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 const MSG_EDIT_WINDOW_MS = 15*60*1000;
@@ -1603,25 +1615,28 @@ function renderMsgBubble(m, role, teacher){
       <div class="msg-bubble ${mine?'mine':'theirs'} deleted" data-msg-id="${m.id}">Ce message a été supprimé pour tout le monde.</div>
     </div>`;
   }
-  const label = mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration');
+  const senderIsOwner = m.sender==='admin' && (DATA.admins||[]).some(a=>a.username===m.senderUsername && isOwnerEmail(a.email));
+  const label = (mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration')) + (senderIsOwner ? verifiedBadgeHtml() : '');
   const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifié à ${fmtTimeOnly(m.editedAt)}</span>` : '';
   const photoOnly = m.photo && !m.text;
   const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
-  const ticksHtml = mine ? msgStatusTicksHtml(m) : '';
+  const ticksHtml = mine ? msgStatusTicksHtml(m, isRecipientOnline(role, teacher)) : '';
   const selMode = !!ui.msgSelectMode;
   const checked = selMode && (ui.msgSelectedIds||[]).includes(m.id);
   const checkHtml = selMode ? `<div class="msg-check"></div>` : '';
   return `<div class="msg-row ${mine?'mine':''}${selMode?' selectable':''}${checked?' sel-checked':''}" ${selMode?`data-msg-select="${m.id}"`:''}>
     ${checkHtml}
     ${msgRowAvatarHtml(av)}
-    <div class="msg-bubble ${mine?'mine':'theirs'}${photoOnly?' photo-only':''}" data-msg-id="${m.id}">${photoHtml}${escapeHtml(m.text)}<span class="meta">${label} · ${fmtMsgTime(m.ts)}${editedTag}${ticksHtml}</span></div>
+    <div class="msg-bubble ${mine?'mine':'theirs'}${photoOnly?' photo-only':''}" data-msg-id="${m.id}">${photoHtml}${escapeHtml(m.text)}<span class="meta">${label} · ${fmtTimeOnly(m.ts)}${editedTag}${ticksHtml}</span></div>
   </div>`;
 }
-/* Ba estati mesaj la: 1 ba = voye, 2 ba wouj = livre (poko li), 2 ba ble = li.
-   Parèt sèlman sou mesaj PA MWEN YO (menm jan tout app messaj fè l). */
-function msgStatusTicksHtml(m){
+/* Ba estati mesaj la: 1 ba = voye, 2 ba wouj = lòt moun nan reyèlman anliy
+   kounye a (men poko li mesaj la), 2 ba ble = li. "recipientOnline" verifye
+   prezans reyèl moun nan (pa jis si sovgad la te reyisi), pou ba wouj la pa
+   parèt si moun nan pa konekte. Parèt sèlman sou mesaj PA MWEN YO. */
+function msgStatusTicksHtml(m, recipientOnline){
   if(m.read) return `<span class="msg-ticks read" title="Li"><span class="tkb"></span><span class="tkb"></span></span>`;
-  if(m.delivered) return `<span class="msg-ticks delivered" title="Livre — poko li"><span class="tkb"></span><span class="tkb"></span></span>`;
+  if(m.delivered && recipientOnline) return `<span class="msg-ticks delivered" title="Moun nan anliy — poko li"><span class="tkb"></span><span class="tkb"></span></span>`;
   return `<span class="msg-ticks sent" title="Voye"><span class="tkb"></span></span>`;
 }
 /* Bouton pou antre/soti nan mòd "seleksyone pa gwoup" pou siprime plizyè mesaj */
@@ -1676,6 +1691,7 @@ function renderMsgActionSheet(teacherId, role, teacher){
 }
 /* Branche tout evenman popup/aksyon/edit pou yon konvèsasyon (itilize pou admin ak pwofesè) */
 function wireMessageThread(teacherId, role, rerender){
+  wirePresenceForThread(teacherId, role, rerender);
   document.querySelectorAll('[data-msg-photo-view]').forEach(img=>img.addEventListener('click', (e)=>{
     e.stopPropagation();
     const overlay = document.createElement('div');
@@ -3018,6 +3034,7 @@ function render(view){
   /* Balans & Peman — chak fonksyon la pwoteje pa try/catch: yon erè isit la pa dwe kraze afichaj app la */
   try{
     if(view==='admin') startWalletWatch(); else stopWalletWatch();
+    if(view==='admin' || view==='teacher') startPresenceWatch(); else stopPresenceWatch();
     walletUpdateBadge();
     decoratePaidOptions();
     decoratePreviewWatermark();
@@ -3270,7 +3287,7 @@ function adminHome(me){
     </div>
     ${stats.nbGraded===0 ? `<div class="empty-state">Okenn done disponib</div>` : `
     <div class="dash-avg-wrap">
-      <div class="dash-avg-gauge"><canvas id="dash-avg-gauge-canvas"></canvas><div class="gauge-label">${fmtAvg(stats.globalAvg)}</div></div>
+      <div class="dash-avg-gauge">${gaugeSvg(stats.globalAvg, DATA.avgScale===10?10:100)}<div class="gauge-label">${fmtAvg(stats.globalAvg)}</div></div>
       <div><div class="dash-avg-big">${fmtAvg(stats.globalAvg)} ${avgScaleLabel()}</div>
       <div class="dash-avg-sub">Kalkile sou ${stats.nbGraded} elèv ki gen nòt antre pou trimès sa a.</div></div>
     </div>`}
@@ -3298,7 +3315,7 @@ function adminHome(me){
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.chart}</span><h3>Evolisyon pa trimès</h3></div>
-    ${evo.length===0 ? `<div class="empty-state">Okenn done disponib</div>` : `<div class="chart-wrap" style="height:190px"><canvas id="dash-evo-canvas"></canvas></div>`}
+    ${evo.length===0 ? `<div class="empty-state">Okenn done disponib</div>` : `<div class="chart-wrap">${evoLineSvg(evo, DATA.avgScale===10?10:100)}</div>`}
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.list}</span><h3>Apèsi rapid</h3></div>
@@ -3652,7 +3669,7 @@ function adminProfile(me){
         <label class="avatar-photo-btn" for="admin-photo-input" title="Ajoute/chanje foto pwofil">${ICONS.camera}</label>
         <input type="file" id="admin-photo-input" class="avatar-photo-input" accept="image/*">
       </div>
-      <div><div class="fiche-name">${escapeHtml(me.name)}</div><div class="fiche-meta">Foto sa a ap ranplase inisyal ou yo sou tout ekran kote yo parèt.</div></div>
+      <div><div class="fiche-name">${escapeHtml(me.name)}${isOwnerEmail(me.email)?verifiedBadgeHtml():''}</div><div class="fiche-meta">Foto sa a ap ranplase inisyal ou yo sou tout ekran kote yo parèt.</div></div>
     </div>
     <div class="profile-info-grid">
       <div class="profile-info-item">
@@ -3731,12 +3748,12 @@ function adminMessageThread(teacher){
   <div class="msg-thread-head">
     <div data-msg-open-profile="1" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
       <div class="msg-avatar sm" style="background:${colorFor(teacherDisplayName(teacher))}">${teacher.photo? `<img src="${teacher.photo}" style="width:100%;height:100%;object-fit:cover">` : initialsOf(teacherDisplayName(teacher))}</div>
-      <div><div class="nm">${escapeHtml(teacherDisplayName(teacher))}</div><div class="sub">Wè pwofil pwofesè a →</div></div>
+      <div><div class="nm">${escapeHtml(teacherDisplayName(teacher))}${isRecipientOnline('admin',teacher)?'<span class="online-dot" title="Anliy kounye a"></span>':''}</div><div class="sub">Wè pwofil pwofesè a →</div></div>
     </div>
     ${msgSelectToggleHtml()}
   </div>
   <div class="msg-bubbles" id="msg-bubbles">
-    ${msgs.length? msgs.map(m=>renderMsgBubble(m,'admin',teacher)).join('') : '<div class="empty-state">Pa gen mesaj nan konvèsasyon sa a toujou.</div>'}
+    ${msgs.length? msgBubblesWithDatesHtml(msgs,'admin',teacher) : '<div class="empty-state">Pa gen mesaj nan konvèsasyon sa a toujou.</div>'}
   </div>
   ${ui.msgSelectMode ? msgBulkBarHtml() : msgComposeFormHtml(teacher, 'admin')}
   ${renderMsgActionSheet(teacher.id,'admin',teacher)}`;
@@ -3876,11 +3893,71 @@ const TOPUP_CHOICES = [25,50,100,200];
 const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
 const OWNER = { ref:null, handler:null, list:[], known:null };
 let SERVER_OFFSET = 0, _offsetRef = null;
+/* ===== Prezans (anliy/òfliy) — pou ba "livre" a sèlman parèt si moun nan
+   reyèlman konekte kounye a, pa sèlman paske mesaj la te byen anrejistre. */
+const PRESENCE = { uid:null, ref:null, connRef:null, connHandler:null };
+const PRESENCE_CACHE = {};
+let _presenceThreadRefs = [];
+function startPresenceWatch(){
+  const u = (FIREBASE_ENABLED && fbAuth && fbDb) ? fbAuth.currentUser : null;
+  if(!u || u.isAnonymous){ stopPresenceWatch(); return; }
+  if(PRESENCE.uid===u.uid && PRESENCE.ref) return;
+  stopPresenceWatch();
+  PRESENCE.uid = u.uid;
+  try{
+    PRESENCE.ref = fbDb.ref('presence/'+u.uid);
+    PRESENCE.connRef = fbDb.ref('.info/connected');
+    PRESENCE.connHandler = snap=>{
+      if(snap.val()===true && PRESENCE.ref){
+        PRESENCE.ref.onDisconnect().set(false);
+        PRESENCE.ref.set(true);
+      }
+    };
+    PRESENCE.connRef.on('value', PRESENCE.connHandler);
+  }catch(e){ console.error('Prezans', e); }
+}
+function stopPresenceWatch(){
+  try{ if(PRESENCE.ref) PRESENCE.ref.set(false); }catch(e){}
+  try{ if(PRESENCE.connRef && PRESENCE.connHandler) PRESENCE.connRef.off('value', PRESENCE.connHandler); }catch(e){}
+  PRESENCE.uid=null; PRESENCE.ref=null; PRESENCE.connRef=null; PRESENCE.connHandler=null;
+}
+/* Swiv prezans moun ki nan lòt bò konvèsasyon an louvri a (yon sèl pwofesè
+   pou admin; nenpòt nan kont administratè yo pou yon pwofesè). */
+function wirePresenceForThread(teacherId, role, rerender){
+  _presenceThreadRefs.forEach(({ref,handler})=>{ try{ ref.off('value', handler); }catch(e){} });
+  _presenceThreadRefs = [];
+  if(!FIREBASE_ENABLED || !fbDb) return;
+  let uids = [];
+  if(role==='admin'){
+    const t = ensureTeachers().find(x=>x.id===teacherId);
+    if(t && t.uid) uids = [t.uid];
+  } else {
+    uids = (DATA.admins||[]).map(a=>a.uid).filter(Boolean);
+  }
+  uids.forEach(uidVal=>{
+    try{
+      const ref = fbDb.ref('presence/'+uidVal);
+      const handler = snap=>{ PRESENCE_CACHE[uidVal] = snap.val()===true; rerender(); };
+      ref.on('value', handler);
+      _presenceThreadRefs.push({ref, handler});
+    }catch(e){}
+  });
+}
+function isRecipientOnline(role, teacher){
+  if(role==='admin') return !!(teacher && teacher.uid && PRESENCE_CACHE[teacher.uid]);
+  return (DATA.admins||[]).some(a=>a.uid && PRESENCE_CACHE[a.uid]);
+}
 
 function fmtG(n){ return String(Math.round((Number(n)||0)*100)/100).replace('.',','); }
 function nowServer(){ return Date.now() + SERVER_OFFSET; }
 function serverTs(){ return firebase.database.ServerValue.TIMESTAMP; }
 function withTimeout(p, ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('delè depase')), ms))]); }
+/* Badj "kont verifye" (ble) — parèt sèlman akote non kont pwopriyetè a
+   (imèl OWNER_EMAIL), nenpòt kote non sa a afiche nan app la. */
+function isOwnerEmail(email){ return String(email||'').toLowerCase()===OWNER_EMAIL; }
+function verifiedBadgeHtml(){
+  return `<svg class="verified-badge" width="15" height="15" viewBox="0 0 24 24" fill="#1877F2"><title>Kont verifye</title><path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3L6.9 3l2.7.4L12 2z"/><path d="M9.3 12.4l1.9 1.9 3.8-4.1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
 function isOwner(){
   const u = (typeof fbAuth!=='undefined' && fbAuth) ? fbAuth.currentUser : null;
   return !!(u && !u.isAnonymous && String(u.email||'').toLowerCase()===OWNER_EMAIL);
@@ -4478,7 +4555,7 @@ function adminSettings(){
     <table><tbody>
       ${(DATA.admins||[]).map(a=>`
       <tr>
-        <td>${escapeHtml(a.name)}</td>
+        <td>${escapeHtml(a.name)}${isOwnerEmail(a.email)?verifiedBadgeHtml():''}</td>
         <td>${escapeHtml(a.username)}${a.username===me.username? ' <strong style="color:var(--blue)">(ou)</strong>':''}</td>
         <td style="text-align:right">${a.username!==me.username? `<button class="btn-small btn-danger-outline" data-del-admin="${a.id}">${ICONS.trash}Retire</button>` : ''}</td>
       </tr>`).join('')}
@@ -4562,9 +4639,9 @@ function teacherMessages(teacher){
     <p class="page-sub">Konvèsasyon ou ak Administration.</p>
   </div>
   <div class="card">
-    <div class="card-head"><span class="ic-wrap">${ICONS.chat}</span><h3>Administration</h3>${msgSelectToggleHtml()}</div>
+    <div class="card-head"><span class="ic-wrap">${ICONS.chat}</span><h3>Administration${isRecipientOnline('teacher',teacher)?'<span class="online-dot" title="Anliy kounye a"></span>':''}</h3>${msgSelectToggleHtml()}</div>
     <div class="msg-bubbles" id="msg-bubbles">
-      ${msgs.length? msgs.map(m=>renderMsgBubble(m,'teacher',teacher)).join('') : '<div class="empty-state">Pa gen mesaj toujou. Voye yon mesaj bay administration.</div>'}
+      ${msgs.length? msgBubblesWithDatesHtml(msgs,'teacher',teacher) : '<div class="empty-state">Pa gen mesaj toujou. Voye yon mesaj bay administration.</div>'}
     </div>
     ${ui.msgSelectMode ? msgBulkBarHtml() : msgComposeFormHtml(teacher, 'teacher')}
     ${renderMsgActionSheet(teacher.id,'teacher',teacher)}
@@ -6507,11 +6584,11 @@ function wireEvents(view){
       const tpd = document.getElementById('term-picker-dash');
       if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
       /* Kat "Mwayèn jeneral" (0) ak "Evolisyon pa trimès" (1) rete louvri pa
-         default — yo gen grafik ladan yo, e yon grafik Chart.js ki kreye
-         pandan kat li ladan l kache ka pa gen bon gwosè. Rès kat yo (Pi bon
-         elèv, Elèv pou swiv, Apèsi rapid, Klas yo) rete pliye. */
+         default — se yo ki gen grafik ladan yo. Rès kat yo (Pi bon elèv,
+         Elèv pou swiv, Apèsi rapid, Klas yo) rete pliye. Grafik yo an SVG
+         senp (pa gen bibliyotèk ekstèn), kidonk yo parèt kòrèkteman kit yo
+         kache kit yo vizib. */
       setupAccordion(document.querySelector('.fb-main'), [0,1]);
-      renderDashboardCharts();
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
