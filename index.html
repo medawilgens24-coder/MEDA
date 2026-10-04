@@ -81,6 +81,10 @@
   .msg-thread-head .sub{font-size:12px;color:var(--blue);font-weight:600;}
   .msg-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;margin-bottom:12px;}
   .msg-bubbles{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding:6px 2px;margin-bottom:12px;}
+  @keyframes msgRowIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+  .msg-row{animation:msgRowIn .22s ease both;}
+  .btn-spinner{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:btnspin .6s linear infinite;margin-right:7px;vertical-align:-3px;opacity:.85;}
+  @keyframes btnspin{to{transform:rotate(360deg);}}
   .msg-bubble{max-width:100%;padding:9px 13px;border-radius:15px;font-size:14px;line-height:1.5;min-width:0;box-shadow:0 1px 2px rgba(0,0,0,.07);}
   .msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
   .msg-bubble.theirs{align-self:flex-start;background:#F0F2F5;color:var(--text);border-bottom-left-radius:4px;}
@@ -94,6 +98,16 @@
   .msg-photo{display:block;max-width:240px;max-height:260px;width:100%;border-radius:11px;margin-bottom:6px;cursor:zoom-in;object-fit:cover;}
   .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
   .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  .msg-select-toggle{background:transparent;border:none;color:var(--text-soft);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-left:auto;}
+  .msg-select-toggle:hover,.msg-select-toggle.active{background:var(--blue-soft);color:var(--blue);}
+  .msg-row.selectable{cursor:pointer;}
+  .msg-row .msg-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;align-self:center;display:flex;align-items:center;justify-content:center;background:#fff;}
+  .msg-row.sel-checked .msg-check{background:var(--blue);border-color:var(--blue);}
+  .msg-row.sel-checked .msg-check::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translate(1px,-1px);}
+  .msg-row.sel-checked .msg-bubble{outline:2px solid var(--blue);outline-offset:1px;}
+  .msg-bulk-bar{display:flex;align-items:center;gap:10px;background:var(--card,#fff);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .msg-bulk-bar .cnt{flex:1;font-size:13.5px;font-weight:600;color:var(--text);}
+  .msg-bulk-bar button{border-radius:50px;}
   .msg-bubble.photo-only{padding:5px;background:transparent;box-shadow:none;}
   .msg-bubble.photo-only.mine .meta{color:var(--text);opacity:.65;padding:0 4px;}
   .msg-bubble.photo-only.mine .msg-ticks .tkb{background:var(--text-soft);}
@@ -1048,7 +1062,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.3';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1297,6 +1311,16 @@ async function verifyPasswordForEmailChange(pass){
     return false;
   }
 }
+/* Montre yon ti sèk k ap vire sou yon bouton pandan l ap trete yon aksyon
+   (koneksyon, kreyasyon kont, elatriye), pou moun nan wè klè li byen peze
+   bouton an. Pa bezwen fonksyon pou retire l — chak chemen (siksè oswa
+   erè) fini pa yon render() ki rebati bouton an fre, san eta "ap chaje". */
+function setBtnBusy(btn, label){
+  if(!btn || btn.dataset.busy) return;
+  btn.dataset.busy = '1';
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner"></span>${escapeHtml(label||'Tann...')}`;
+}
 /* Fè kat (.card) nan yon paj vin akòdeyon: yo pliye pa default, yo plisye lè w klike
    sou tèt la (.card-head). openFirst: id (string) kat ki dwe rete plisye pa default. */
 function setupAccordion(root, openFirst){
@@ -1319,7 +1343,8 @@ function setupAccordion(root, openFirst){
       card.appendChild(body);
     }
     card.classList.add('acc-card');
-    if(openFirst!=null && i===openFirst) card.classList.add('open');
+    const shouldOpen = openFirst!=null && (Array.isArray(openFirst) ? openFirst.includes(i) : i===openFirst);
+    if(shouldOpen) card.classList.add('open');
     if(!head.dataset.accBound){
       head.dataset.accBound = '1';
       head.addEventListener('click', ()=>{
@@ -1583,7 +1608,11 @@ function renderMsgBubble(m, role, teacher){
   const photoOnly = m.photo && !m.text;
   const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
   const ticksHtml = mine ? msgStatusTicksHtml(m) : '';
-  return `<div class="msg-row ${mine?'mine':''}">
+  const selMode = !!ui.msgSelectMode;
+  const checked = selMode && (ui.msgSelectedIds||[]).includes(m.id);
+  const checkHtml = selMode ? `<div class="msg-check"></div>` : '';
+  return `<div class="msg-row ${mine?'mine':''}${selMode?' selectable':''}${checked?' sel-checked':''}" ${selMode?`data-msg-select="${m.id}"`:''}>
+    ${checkHtml}
     ${msgRowAvatarHtml(av)}
     <div class="msg-bubble ${mine?'mine':'theirs'}${photoOnly?' photo-only':''}" data-msg-id="${m.id}">${photoHtml}${escapeHtml(m.text)}<span class="meta">${label} · ${fmtMsgTime(m.ts)}${editedTag}${ticksHtml}</span></div>
   </div>`;
@@ -1594,6 +1623,34 @@ function msgStatusTicksHtml(m){
   if(m.read) return `<span class="msg-ticks read" title="Li"><span class="tkb"></span><span class="tkb"></span></span>`;
   if(m.delivered) return `<span class="msg-ticks delivered" title="Livre — poko li"><span class="tkb"></span><span class="tkb"></span></span>`;
   return `<span class="msg-ticks sent" title="Voye"><span class="tkb"></span></span>`;
+}
+/* Bouton pou antre/soti nan mòd "seleksyone pa gwoup" pou siprime plizyè mesaj */
+function msgSelectToggleHtml(){
+  const active = !!ui.msgSelectMode;
+  return `<button type="button" class="msg-select-toggle${active?' active':''}" data-msg-select-toggle="1" title="${active?'Kite mòd seleksyon':'Seleksyone plizyè mesaj'}">${ICONS.list}</button>`;
+}
+/* Ba ki ranplase ba konpoze a lè mòd seleksyon aktive — montre konbyen mesaj
+   seleksyone ak aksyon Siprime / Anile */
+function msgBulkBarHtml(){
+  if(!ui.msgSelectMode) return '';
+  const n = (ui.msgSelectedIds||[]).length;
+  return `<div class="msg-bulk-bar">
+    <span class="cnt">${n? n+' mesaj seleksyone' : 'Tape sou mesaj ou vle seleksyone yo'}</span>
+    <button type="button" class="btn btn-ghost btn-pill" data-msg-select-cancel="1">Anile</button>
+    <button type="button" class="btn btn-danger-outline btn-pill" data-msg-select-delete="1" ${n?'':'disabled'}>${ICONS.trash}Siprime${n?' ('+n+')':''}</button>
+  </div>`;
+}
+/* Ba konpoze mesaj la (tèks + foto) — pataje ant admin ak pwofesè */
+function msgComposeFormHtml(teacher, role){
+  const placeholder = role==='admin' ? `Ekri yon mesaj pou ${escapeHtml(teacherDisplayName(teacher)||'pwofesè a')}...` : `Ekri yon mesaj bay administration...`;
+  const camTitle = role==='admin' ? 'Voye yon foto' : 'Voye yon foto bay administratè a';
+  return `${ui.msgComposePhoto ? `<div class="msg-compose-preview"><img src="${ui.msgComposePhoto}" alt="Apèsi foto"><button type="button" id="msg-compose-photo-remove">&times;</button></div>` : ''}
+  <form id="msg-compose-form" class="msg-compose">
+    <label class="msg-attach-btn" for="msg-compose-photo-input" title="${camTitle}">${ICONS.camera}</label>
+    <input type="file" id="msg-compose-photo-input" accept="image/*" style="display:none">
+    <textarea id="msg-compose-text" placeholder="${placeholder}"></textarea>
+    <button class="btn btn-primary btn-pill" type="submit" aria-label="Voye">${ICONS.send}</button>
+  </form>`;
 }
 /* Sheet actions ki parèt lè yo tape sou yon mesaj */
 function renderMsgActionSheet(teacherId, role, teacher){
@@ -1630,7 +1687,46 @@ function wireMessageThread(teacherId, role, rerender){
   document.querySelectorAll('[data-msg-id]').forEach(el=>el.addEventListener('click', (e)=>{
     e.stopPropagation();
     const id = el.dataset.msgId;
+    if(ui.msgSelectMode){
+      const arr = ui.msgSelectedIds || (ui.msgSelectedIds=[]);
+      const idx = arr.indexOf(id);
+      if(idx>=0) arr.splice(idx,1); else arr.push(id);
+      rerender();
+      return;
+    }
     ui.msgActionFor = (ui.msgActionFor===id) ? null : id;
+    rerender();
+  }));
+  document.querySelectorAll('[data-msg-select]').forEach(row=>row.addEventListener('click', ()=>{
+    const id = row.dataset.msgSelect;
+    const arr = ui.msgSelectedIds || (ui.msgSelectedIds=[]);
+    const idx = arr.indexOf(id);
+    if(idx>=0) arr.splice(idx,1); else arr.push(id);
+    rerender();
+  }));
+  document.querySelectorAll('[data-msg-select-toggle]').forEach(el=>el.addEventListener('click', ()=>{
+    ui.msgSelectMode = !ui.msgSelectMode;
+    ui.msgSelectedIds = [];
+    ui.msgActionFor = null;
+    rerender();
+  }));
+  document.querySelectorAll('[data-msg-select-cancel]').forEach(el=>el.addEventListener('click', ()=>{
+    ui.msgSelectMode = false;
+    ui.msgSelectedIds = [];
+    rerender();
+  }));
+  document.querySelectorAll('[data-msg-select-delete]').forEach(el=>el.addEventListener('click', async ()=>{
+    const ids = ui.msgSelectedIds || [];
+    if(!ids.length) return;
+    const ok = await showConfirm(`Siprime ${ids.length} mesaj pou ou sèlman? Mesaj yo ap toujou vizib pou lòt moun nan.`);
+    if(!ok) return;
+    ids.forEach(id=>{
+      const m = ensureMessages().find(x=>x.id===id);
+      if(m){ if(!Array.isArray(m.deletedFor)) m.deletedFor=[]; if(!m.deletedFor.includes(role)) m.deletedFor.push(role); }
+    });
+    ui.msgSelectMode = false;
+    ui.msgSelectedIds = [];
+    await saveData();
     rerender();
   }));
   document.querySelectorAll('[data-msg-action-close]').forEach(el=>el.addEventListener('click', (e)=>{
@@ -2926,7 +3022,49 @@ function render(view){
     decoratePaidOptions();
     decoratePreviewWatermark();
   }catch(e){ console.error('Balans/Peman', e); }
+  try{ syncBackButtonTrap(view); }catch(e){ console.error('Bouton tounen', e); }
 }
+
+/* ===================== Bouton/jès "tounen" telefòn lan =====================
+   Objektif: lè moun nan AP SOU yon lòt paj (pa dashboard la), bouton/jès
+   tounen an dwe mennen l tounen sou dashboard pa l (Akèy), li pa dwe fèmen
+   app la nèt. Se sèlman lè li DEJA sou dashboard la (Akèy) yon klik tounen
+   dwe fèmen/kite app la, jan sa ta fèt nòmalman.
+   Metòd la: nou "ame yon pyèj" nan istorik navigatè a (yon antre anplis,
+   pushState) chak fwa moun nan kite dashboard la; nenpòt lòt deplasman
+   anndan app la pandan pyèj la ame rete san chanjman (yon sèl antre pyèj,
+   kèlkeswa konbyen paj yo vizite anndan app la). Lè yo tounen sou Akèy pa
+   yo menm (nan navigasyon), nou retire pyèj la ak history.back() san bri. */
+let _backTrapArmed = false;
+let _backTrapProgrammatic = false;
+function isHomeView(view){
+  if(view==='admin') return ui.adminView==='akey';
+  if(view==='teacher') return ui.teacherView==='akey';
+  /* Login, chwazi-lekòl ak lòt paj anvan koneksyon: konsidere yo kòm "kay" —
+     yon klik tounen la dwe fèmen app la dirèkteman, san blokaj. */
+  return true;
+}
+function syncBackButtonTrap(view){
+  if(typeof history==='undefined' || !history.pushState) return;
+  const home = isHomeView(view);
+  if(!home && !_backTrapArmed){
+    history.pushState({mwBackTrap:true}, '', '');
+    _backTrapArmed = true;
+  } else if(home && _backTrapArmed){
+    _backTrapProgrammatic = true;
+    history.back();
+  }
+}
+window.addEventListener('popstate', ()=>{
+  if(_backTrapProgrammatic){ _backTrapProgrammatic = false; _backTrapArmed = false; return; }
+  if(_backTrapArmed){
+    _backTrapArmed = false;
+    if(session && session.role==='admin'){ ui.adminView = 'akey'; render('admin'); }
+    else if(session && session.role==='teacher'){ ui.teacherView = 'akey'; render('teacher'); }
+  }
+  /* Si pa t gen pyèj ame, se paske moun nan te deja sou Akèy (oswa sou paj
+     koneksyon an) — nou kite klik tounen an fèmen app la nòmalman. */
+});
 
 /* ===================== VIEW: CHWAZI LEKÒL (premye fwa sou yon aparèy) ===================== */
 function viewSchoolGate(){
@@ -3590,20 +3728,17 @@ function adminMessageThread(teacher){
   const msgs = visibleMessagesFor(teacher.id, 'admin');
   return `
   ${window.innerWidth<=900?`<a class="msg-back" data-msg-back="1">${ICONS.back}Tounen</a>`:''}
-  <div class="msg-thread-head" data-msg-open-profile="1">
-    <div class="msg-avatar sm" style="background:${colorFor(teacherDisplayName(teacher))}">${teacher.photo? `<img src="${teacher.photo}" style="width:100%;height:100%;object-fit:cover">` : initialsOf(teacherDisplayName(teacher))}</div>
-    <div><div class="nm">${escapeHtml(teacherDisplayName(teacher))}</div><div class="sub">Wè pwofil pwofesè a →</div></div>
+  <div class="msg-thread-head">
+    <div data-msg-open-profile="1" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+      <div class="msg-avatar sm" style="background:${colorFor(teacherDisplayName(teacher))}">${teacher.photo? `<img src="${teacher.photo}" style="width:100%;height:100%;object-fit:cover">` : initialsOf(teacherDisplayName(teacher))}</div>
+      <div><div class="nm">${escapeHtml(teacherDisplayName(teacher))}</div><div class="sub">Wè pwofil pwofesè a →</div></div>
+    </div>
+    ${msgSelectToggleHtml()}
   </div>
   <div class="msg-bubbles" id="msg-bubbles">
     ${msgs.length? msgs.map(m=>renderMsgBubble(m,'admin',teacher)).join('') : '<div class="empty-state">Pa gen mesaj nan konvèsasyon sa a toujou.</div>'}
   </div>
-  ${ui.msgComposePhoto ? `<div class="msg-compose-preview"><img src="${ui.msgComposePhoto}" alt="Apèsi foto"><button type="button" id="msg-compose-photo-remove">&times;</button></div>` : ''}
-  <form id="msg-compose-form" class="msg-compose">
-    <label class="msg-attach-btn" for="msg-compose-photo-input" title="Voye yon foto">${ICONS.camera}</label>
-    <input type="file" id="msg-compose-photo-input" accept="image/*" style="display:none">
-    <textarea id="msg-compose-text" placeholder="Ekri yon mesaj pou ${escapeHtml(teacherDisplayName(teacher)||'pwofesè a')}..."></textarea>
-    <button class="btn btn-primary btn-pill" type="submit" aria-label="Voye">${ICONS.send}</button>
-  </form>
+  ${ui.msgSelectMode ? msgBulkBarHtml() : msgComposeFormHtml(teacher, 'admin')}
   ${renderMsgActionSheet(teacher.id,'admin',teacher)}`;
 }
 
@@ -4427,17 +4562,11 @@ function teacherMessages(teacher){
     <p class="page-sub">Konvèsasyon ou ak Administration.</p>
   </div>
   <div class="card">
-    <div class="card-head"><span class="ic-wrap">${ICONS.chat}</span><h3>Administration</h3></div>
+    <div class="card-head"><span class="ic-wrap">${ICONS.chat}</span><h3>Administration</h3>${msgSelectToggleHtml()}</div>
     <div class="msg-bubbles" id="msg-bubbles">
       ${msgs.length? msgs.map(m=>renderMsgBubble(m,'teacher',teacher)).join('') : '<div class="empty-state">Pa gen mesaj toujou. Voye yon mesaj bay administration.</div>'}
     </div>
-    ${ui.msgComposePhoto ? `<div class="msg-compose-preview"><img src="${ui.msgComposePhoto}" alt="Apèsi foto"><button type="button" id="msg-compose-photo-remove">&times;</button></div>` : ''}
-    <form id="msg-compose-form" class="msg-compose">
-      <label class="msg-attach-btn" for="msg-compose-photo-input" title="Voye yon foto bay administratè a">${ICONS.camera}</label>
-      <input type="file" id="msg-compose-photo-input" accept="image/*" style="display:none">
-      <textarea id="msg-compose-text" placeholder="Ekri yon mesaj bay administration..."></textarea>
-      <button class="btn btn-primary btn-pill" type="submit" aria-label="Voye">${ICONS.send}</button>
-    </form>
+    ${ui.msgSelectMode ? msgBulkBarHtml() : msgComposeFormHtml(teacher, 'teacher')}
     ${renderMsgActionSheet(teacher.id,'teacher',teacher)}
   </div>`;
 }
@@ -6148,7 +6277,7 @@ function wireEvents(view){
       const p = document.getElementById('l-pass').value;
       if(!FIREBASE_ENABLED || !fbAuth){ ui.errors.login=FIREBASE_INIT_ERROR || 'Firebase pa konfigire — enposib pou konekte.'; render('login'); return; }
       const btn = af.querySelector('button[type="submit"]');
-      if(btn) btn.disabled = true;
+      setBtnBusy(btn, 'Ap konekte...');
       try{
         const cred = await fbAuth.signInWithEmailAndPassword(email, p);
         /* IMPÒTAN: rechaje done lekòl la KOUNYE A, apre otantifikasyon an
@@ -6275,7 +6404,7 @@ function wireEvents(view){
       const p = document.getElementById('tl-pass').value;
       if(!FIREBASE_ENABLED || !fbAuth){ ui.errors.login=FIREBASE_INIT_ERROR || 'Firebase pa konfigire — enposib pou konekte.'; render('login'); return; }
       const btn = tf.querySelector('button[type="submit"]');
-      if(btn) btn.disabled = true;
+      setBtnBusy(btn, 'Ap konekte...');
       try{
         const cred = await fbAuth.signInWithEmailAndPassword(email, p);
         /* Menm koreksyon ke pou administratè yo: rechaje done yo APRE
@@ -6377,8 +6506,12 @@ function wireEvents(view){
       }));
       const tpd = document.getElementById('term-picker-dash');
       if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
+      /* Kat "Mwayèn jeneral" (0) ak "Evolisyon pa trimès" (1) rete louvri pa
+         default — yo gen grafik ladan yo, e yon grafik Chart.js ki kreye
+         pandan kat li ladan l kache ka pa gen bon gwosè. Rès kat yo (Pi bon
+         elèv, Elèv pou swiv, Apèsi rapid, Klas yo) rete pliye. */
+      setupAccordion(document.querySelector('.fb-main'), [0,1]);
       renderDashboardCharts();
-      setupAccordion(document.querySelector('.fb-main'), -1);
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
@@ -6642,7 +6775,7 @@ function wireEvents(view){
     }
     if(ui.adminView==='mesaj'){
       document.querySelectorAll('[data-msg-teacher]').forEach(b=>b.addEventListener('click', ()=>{
-        ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; ui.msgComposePhoto=null; render('admin');
+        ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; ui.msgComposePhoto=null; ui.msgSelectMode=false; ui.msgSelectedIds=[]; render('admin');
       }));
       const backBtn = document.querySelector('[data-msg-back]');
       if(backBtn) backBtn.addEventListener('click', ()=>{ ui.msgTeacherId=null; ui.msgShowProfile=false; render('admin'); });
@@ -6693,9 +6826,12 @@ function wireEvents(view){
         ensureMessages().push(msg);
         ui.msgComposePhoto = null;
         render('admin');
-        await saveData();
+        /* Mete delivered=true AVAN sèl sovgad la (pa de sovgad apa) — konsa
+           pa gen 2 ekriti Firebase k ap fè kous youn kont lòt: si yo te
+           separe, sovgad "li" lòt moun nan te ka ekraze sovgad "livre" sa a
+           (oswa vis-vèrsa), e sa te fè ba wouj la pa janm parèt alafwa. */
         msg.delivered = true;
-        saveData();
+        await saveData();
         render('admin');
       });
       const bub = document.getElementById('msg-bubbles');
@@ -7031,9 +7167,8 @@ function wireEvents(view){
         ensureMessages().push(msg);
         ui.msgComposePhoto = null;
         render('teacher');
-        await saveData();
         msg.delivered = true;
-        saveData();
+        await saveData();
         render('teacher');
       });
       const bub = document.getElementById('msg-bubbles');
