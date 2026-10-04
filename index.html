@@ -999,6 +999,10 @@
   .wal-chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;}
   .wal-chip.on{background:var(--blue);border-color:var(--blue);color:#fff;}
   .wal-step{font-size:13.5px;color:var(--text);font-weight:700;margin:0 0 8px;}
+  .vip-card{background:linear-gradient(135deg,#F4F8FF,#ffffff);border:1px solid #D7E6FE;}
+  .vip-card .ic-wrap{background:transparent;padding:0;}
+  .vip-perks{margin:0 0 14px;padding-left:20px;font-size:13.5px;color:var(--text);line-height:1.6;}
+  .vip-perks li{margin-bottom:2px;}
   .wal-price{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:14px;line-height:1.45;}
   .wal-price:last-child{border-bottom:none;}
   .wal-price .pr{font-weight:800;color:var(--blue);white-space:nowrap;}
@@ -1068,7 +1072,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.7';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1375,7 +1379,7 @@ function gaugeSvg(val, scaleMax){
   </svg>`;
 }
 function evoLineSvg(evo, scaleMax){
-  const w=320, h=180, padL=4, padR=4, padT=18, padB=24;
+  const w=320, h=180, padL=10, padR=10, padT=20, padB=28;
   const plotW=w-padL-padR, plotH=h-padT-padB, n=evo.length;
   const pts = evo.map((e,i)=>{
     const x = padL + (n<=1 ? plotW/2 : (i/(n-1))*plotW);
@@ -1383,6 +1387,10 @@ function evoLineSvg(evo, scaleMax){
     const y = padT + plotH - frac*plotH;
     return {x, y, term:e.term, avg:e.avg};
   });
+  /* Etikèt pwent gòch la kòmanse sou pwen an epi ale adwat; etikèt pwent dwat
+     la fini sou pwen an epi ale agoch — konsa yo pa janm soti deyò kad la. */
+  const anchorFor = i => (i===0 ? 'start' : (i===n-1 ? 'end' : 'middle'));
+  const dxFor = i => (i===0 ? 3 : (i===n-1 ? -3 : 0));
   const pathD = pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
   const areaD = `${pathD} L${pts[pts.length-1].x.toFixed(1)},${(padT+plotH).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
   const gridLines = [0,.25,.5,.75,1].map(f=>{
@@ -1390,9 +1398,9 @@ function evoLineSvg(evo, scaleMax){
     return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="#E4E6EA" stroke-width="1"/>`;
   }).join('');
   const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#1877F2" stroke="#fff" stroke-width="2"/>`).join('');
-  const valueLabels = pts.map(p=>`<text x="${p.x.toFixed(1)}" y="${(p.y-10).toFixed(1)}" font-size="10.5" font-weight="700" fill="#1877F2" text-anchor="middle">${escapeHtml(fmtAvg(p.avg))}</text>`).join('');
-  const termLabels = pts.map(p=>`<text x="${p.x.toFixed(1)}" y="${h-8}" font-size="10" fill="#65676B" text-anchor="middle">${escapeHtml(p.term)}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="190" preserveAspectRatio="none">
+  const valueLabels = pts.map((p,i)=>`<text x="${(p.x+dxFor(i)).toFixed(1)}" y="${(p.y-10).toFixed(1)}" font-size="10.5" font-weight="700" fill="#1877F2" text-anchor="${anchorFor(i)}">${escapeHtml(fmtAvg(p.avg))}</text>`).join('');
+  const termLabels = pts.map((p,i)=>`<text x="${(p.x+dxFor(i)).toFixed(1)}" y="${h-8}" font-size="10" fill="#65676B" text-anchor="${anchorFor(i)}">${escapeHtml(p.term)}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="190" preserveAspectRatio="xMidYMid meet">
     ${gridLines}
     <path d="${areaD}" fill="rgba(24,119,242,.12)" stroke="none"/>
     <path d="${pathD}" fill="none" stroke="#1877F2" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
@@ -1615,8 +1623,8 @@ function renderMsgBubble(m, role, teacher){
       <div class="msg-bubble ${mine?'mine':'theirs'} deleted" data-msg-id="${m.id}">Ce message a été supprimé pour tout le monde.</div>
     </div>`;
   }
-  const senderIsOwner = m.sender==='admin' && (DATA.admins||[]).some(a=>a.username===m.senderUsername && isOwnerEmail(a.email));
-  const label = (mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration')) + (senderIsOwner ? verifiedBadgeHtml() : '');
+  const senderAdminRec = m.sender==='admin' ? (DATA.admins||[]).find(a=>a.username===m.senderUsername) : null;
+  const label = (mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration')) + (hasBlueBadge(senderAdminRec) ? verifiedBadgeHtml() : '');
   const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifié à ${fmtTimeOnly(m.editedAt)}</span>` : '';
   const photoOnly = m.photo && !m.text;
   const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
@@ -3669,7 +3677,7 @@ function adminProfile(me){
         <label class="avatar-photo-btn" for="admin-photo-input" title="Ajoute/chanje foto pwofil">${ICONS.camera}</label>
         <input type="file" id="admin-photo-input" class="avatar-photo-input" accept="image/*">
       </div>
-      <div><div class="fiche-name">${escapeHtml(me.name)}${isOwnerEmail(me.email)?verifiedBadgeHtml():''}</div><div class="fiche-meta">Foto sa a ap ranplase inisyal ou yo sou tout ekran kote yo parèt.</div></div>
+      <div><div class="fiche-name">${escapeHtml(me.name)}${hasBlueBadge(me)?verifiedBadgeHtml():''}</div><div class="fiche-meta">Foto sa a ap ranplase inisyal ou yo sou tout ekran kote yo parèt.</div></div>
     </div>
     <div class="profile-info-grid">
       <div class="profile-info-item">
@@ -3881,7 +3889,7 @@ function dataCleanupHtml(){
 const OWNER_EMAIL = 'medawilgens24@gmail.com';
 const NATCASH_RAW = '+50943011194';
 const NATCASH_DISPLAY = '+509 4301 1194';
-const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10 };
+const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMonth:500 };
 /* Gratis = premye yo nan lis la. Chanje lis sa yo si w vle chanje sa ki gratis.
    bulletinStyles = peman ENDIVIDYÈL (chak bilten se pou 1 sèl elèv).
    palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv).
@@ -3890,7 +3898,7 @@ const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10 };
 const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
-const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
+const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, vipUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
 const OWNER = { ref:null, handler:null, list:[], known:null };
 let SERVER_OFFSET = 0, _offsetRef = null;
 /* ===== Prezans (anliy/òfliy) — pou ba "livre" a sèlman parèt si moun nan
@@ -3952,29 +3960,70 @@ function fmtG(n){ return String(Math.round((Number(n)||0)*100)/100).replace('.',
 function nowServer(){ return Date.now() + SERVER_OFFSET; }
 function serverTs(){ return firebase.database.ServerValue.TIMESTAMP; }
 function withTimeout(p, ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('delè depase')), ms))]); }
-/* Badj "kont verifye" (ble) — parèt sèlman akote non kont pwopriyetè a
-   (imèl OWNER_EMAIL), nenpòt kote non sa a afiche nan app la. */
+/* Badj "kont verifye" (ble) — parèt pou kont pwopriyetè a (imèl OWNER_EMAIL)
+   OSWA pou nenpòt lòt admin ki gen yon pas VIP aktif (500G/mwa, achte sou
+   paj Balans la). vipUntil admin an sove dirèkteman sou pwòp fich li anndan
+   DATA.admins pou tout moun (lòt admin, pwofesè) ka wè badj la tou, pa
+   sèlman moun ki achte l la. */
 function isOwnerEmail(email){ return String(email||'').toLowerCase()===OWNER_EMAIL; }
-function verifiedBadgeHtml(){
-  return `<svg class="verified-badge" width="15" height="15" viewBox="0 0 24 24" fill="#1877F2"><title>Kont verifye</title><path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3L6.9 3l2.7.4L12 2z"/><path d="M9.3 12.4l1.9 1.9 3.8-4.1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function hasBlueBadge(adminRecord){
+  if(!adminRecord) return false;
+  if(isOwnerEmail(adminRecord.email)) return true;
+  return !!(adminRecord.vipUntil && adminRecord.vipUntil > nowServer());
+}
+/* Achte pas VIP la (500G/mwa) pou admin ki konekte kounye a: retire lajan nan
+   balans li, epi mete dat ekspirasyon an sou pwòp fich li nan DATA.admins pou
+   badj la ak tout aksè premium yo vizib/aktif pou tout moun imedyatman. */
+async function buyVipPass(me){
+  if(!FIREBASE_ENABLED || !fbDb || !WALLET.uid){ await showAlert('Ou dwe konekte pou achte sa.'); return; }
+  if(!navigator.onLine){ await showAlert('Ou bezwen entènèt pou sa.'); return; }
+  await walletEnsureLoaded();
+  if(WALLET.error){ await showAlert('Pa ka li balans ou kounye a. Eseye ankò pita.'); return; }
+  if(walletVipActive()){ await showAlert('Ou gen yon pas VIP ki deja aktif jiska '+escapeHtml(walDate(WALLET.vipUntil))+'.'); return; }
+  if(WALLET.balance < PRICES.vipMonth){
+    const go = await showConfirm('Pas VIP la koute '+fmtG(PRICES.vipMonth)+' G.\nBalans ou : '+fmtG(WALLET.balance)+' G\n\nPou ajoute lajan, voye l sou NatCash '+NATCASH_DISPLAY+' epi soumèt kòd tranzaksyon an.', {okLabel:'Ajoute lajan', title:'Balans ensifizan'});
+    if(go){ ui.walOwner=false; render('admin'); }
+    return;
+  }
+  const ok = await showConfirm('Achte pas VIP la pou 1 mwa?\n\n• Badj verifye (ble) bò kote non w\n• Tout modèl, estil ak dokiman premium gratis pandan mwa a\n\nBalans : '+fmtG(WALLET.balance)+' G → '+fmtG(WALLET.balance-PRICES.vipMonth)+' G', {okLabel:'Peye '+fmtG(PRICES.vipMonth)+' G', title:'Pas VIP — 1 mwa'});
+  if(!ok) return;
+  try{
+    await walletSpend('vippass', PRICES.vipMonth);
+    /* Kalkile dat ekspirasyon an lokalman (pa tann round-trip Firebase lan)
+       pou evite yon ti kous ant sovgad peman an ak mizajou fich admin lan. */
+    const newVipUntil = nowServer() + 30*86400000;
+    const rec = (DATA.admins||[]).find(a=>a.id===me.id);
+    if(rec){ rec.vipUntil = newVipUntil; await saveData(); }
+    await showAlert('Pas VIP la aktive! Badj la ak tout aksè premium yo disponib jiska '+escapeHtml(walDate(newVipUntil))+'.');
+    render('admin');
+  }catch(e){
+    await showAlert('Peman an pa pase ('+((e && e.message)||'erè')+'). Verifye entènèt ou epi eseye ankò.');
+  }
+}
+function verifiedBadgeHtml(size){
+  const s = size||15;
+  return `<svg class="verified-badge" width="${s}" height="${s}" viewBox="0 0 24 24" fill="#1877F2"><title>Kont verifye</title><path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3L6.9 3l2.7.4L12 2z"/><path d="M9.3 12.4l1.9 1.9 3.8-4.1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function isOwner(){
   const u = (typeof fbAuth!=='undefined' && fbAuth) ? fbAuth.currentUser : null;
   return !!(u && !u.isAnonymous && String(u.email||'').toLowerCase()===OWNER_EMAIL);
 }
 function walletRecompute(v){
-  let cr=0, sp=0, pass=0;
+  let cr=0, sp=0, pass=0, vip=0;
   const credits = (v && v.credits) || {}, spends = (v && v.spends) || {};
   Object.keys(credits).forEach(k=>{ const c=credits[k]; if(c) cr += Number(c.amount)||0; });
   Object.keys(spends).forEach(k=>{
     const x=spends[k]; if(!x) return;
     sp += Number(x.amount)||0;
     if(x.kind==='fontpass') pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
+    if(x.kind==='vippass') vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
   });
   WALLET.balance = Math.round((cr-sp)*100)/100;
   WALLET.fontPassUntil = pass;
+  WALLET.vipUntil = vip;
 }
 function walletFontPassActive(){ return WALLET.fontPassUntil > nowServer(); }
+function walletVipActive(){ return WALLET.vipUntil > nowServer(); }
 function ownerFlatten(v){
   const out=[];
   Object.keys(v||{}).forEach(uid=>{
@@ -4040,7 +4089,7 @@ function stopWalletWatch(){
   try{ if(WALLET.reqRef && WALLET.reqHandler) WALLET.reqRef.off('value', WALLET.reqHandler); }catch(e){}
   try{ if(_offsetRef) _offsetRef.off(); }catch(e){}
   WALLET.uid=null; WALLET.ref=null; WALLET.handler=null; WALLET.reqRef=null; WALLET.reqHandler=null;
-  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.reqs=[];
+  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.vipUntil=0; WALLET.reqs=[];
   _offsetRef = null;
   stopOwnerWatch();
 }
@@ -4078,6 +4127,7 @@ async function walletSpend(kind, amount){
 }
 function paidNeeds(o){
   const needs=[];
+  if(walletVipActive()) return needs; /* manm VIP — tout fonksyon premium gratis pandan mwa a */
   if(o.docType && !FREE.docTypes.includes(o.docType)) needs.push({kind:'doctype', amount:PRICES.docType, label:'Dokiman ofisyèl — '+docTypeById(o.docType).label});
   if(o.docTemplate && !FREE.docTemplates.includes(o.docTemplate)) needs.push({kind:'doc', amount:PRICES.doc, label:'Modèl dokiman premium'});
   if(o.bulletinStyle && !FREE.bulletinStyles.includes(o.bulletinStyle)) needs.push({kind:'bulletin', amount:PRICES.bulletin, label:'Estil bilten premium (1 elèv)'});
@@ -4136,6 +4186,7 @@ async function ensurePaid(o){
 }
 /* Mete pri a bò kote opsyon premium yo nan lis chwa yo (san chanje rès UI a). */
 function decoratePaidOptions(){
+  if(walletVipActive()) return; /* Manm VIP — tout bagay gratis, pa mete pri sou chwa yo */
   const mark = (sel, freeIds, price)=>{
     document.querySelectorAll(sel+' option').forEach(o=>{
       if(o.dataset.paidMarked) return;
@@ -4188,6 +4239,7 @@ function adminWallet(me){
   const balText = owner ? 'Pwopriyetè' : (WALLET.error ? '—' : (WALLET.loaded ? fmtG(WALLET.balance)+' G' : '...'));
   const passLine = (!owner && walletFontPassActive())
     ? `<div class="wal-sub">Estil ekriti premium aktif jiska ${escapeHtml(walDate(WALLET.fontPassUntil))}.</div>` : '';
+  const vipActive = !owner && walletVipActive();
   const errLine = WALLET.error ? `<p class="error-msg">Pa ka li balans lan (${escapeHtml(WALLET.error)}). Verifye entènèt ou.</p>` : '';
   const chips = TOPUP_CHOICES.map(a=>`<button type="button" class="wal-chip ${String(d.amount)===String(a)?'on':''}" data-wal-amt="${a}">${a} G</button>`).join('');
   const reqs = WALLET.reqs.slice(0,15).map(r=>`
@@ -4212,6 +4264,19 @@ function adminWallet(me){
   ${owner ? `<div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.idcard}</span><h3>Panèl pwopriyetè</h3></div>
     <button type="button" class="btn btn-primary btn-pill btn-block" id="wal-open-owner">Verifye peman yo (${pending} an atant)</button>
+  </div>` : ''}
+  ${!owner ? `<div class="card vip-card">
+    <div class="card-head"><span class="ic-wrap">${verifiedBadgeHtml(22)}</span><h3>Pas VIP — 1 mwa</h3></div>
+    ${vipActive ? `
+      <div class="wal-sub">Pas VIP ou aktif jiska <b>${escapeHtml(walDate(WALLET.vipUntil))}</b>. Badj verifye a ak tout fonksyon premium yo gratis pou ou pandan tan sa a.</div>
+    ` : `
+      <p class="hint" style="text-align:left;margin:0 0 12px">Achte pas la yon sèl fwa, pou yon mwa antye:</p>
+      <ul class="vip-perks">
+        <li>Badj verifye (ble) bò kote non w, kote l parèt</li>
+        <li>Tout modèl dokiman, estil bilten/palmarès ak estil ekriti premium — gratis pandan mwa a</li>
+      </ul>
+      <button type="button" class="btn btn-primary btn-pill btn-block" id="wal-buy-vip">Achte pas VIP — ${fmtG(PRICES.vipMonth)} G</button>
+    `}
   </div>` : ''}
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.wallet}</span><h3>Ajoute lajan ak NatCash</h3></div>
@@ -4555,7 +4620,7 @@ function adminSettings(){
     <table><tbody>
       ${(DATA.admins||[]).map(a=>`
       <tr>
-        <td>${escapeHtml(a.name)}${isOwnerEmail(a.email)?verifiedBadgeHtml():''}</td>
+        <td>${escapeHtml(a.name)}${hasBlueBadge(a)?verifiedBadgeHtml():''}</td>
         <td>${escapeHtml(a.username)}${a.username===me.username? ' <strong style="color:var(--blue)">(ou)</strong>':''}</td>
         <td style="text-align:right">${a.username!==me.username? `<button class="btn-small btn-danger-outline" data-del-admin="${a.id}">${ICONS.trash}Retire</button>` : ''}</td>
       </tr>`).join('')}
@@ -6753,6 +6818,8 @@ function wireEvents(view){
     if(ui.adminView==='wal'){
       const openOwner = document.getElementById('wal-open-owner');
       if(openOwner) openOwner.addEventListener('click', ()=>{ ui.walOwner=true; render('admin'); });
+      const buyVip = document.getElementById('wal-buy-vip');
+      if(buyVip) buyVip.addEventListener('click', ()=>{ buyVipPass(currentAdmin()); });
       const ownBack = document.getElementById('own-back');
       if(ownBack) ownBack.addEventListener('click', ()=>{ ui.walOwner=false; render('admin'); });
       const ownCopy = document.getElementById('own-copy-uid');
