@@ -1072,7 +1072,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '1.7';
+const APP_VERSION = '2.26.10.11';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1562,7 +1562,9 @@ function fmtDayLabel(ts){
   const diffDays = Math.round((startOf(now)-startOf(d))/86400000);
   if(diffDays===0) return 'Jodi a';
   if(diffDays===1) return 'Yè';
-  return d.toLocaleDateString('fr-FR',{weekday:'long', day:'numeric', month:'long', year: d.getFullYear()!==now.getFullYear() ? 'numeric' : undefined});
+  const JOU = ['Dimanch','Lendi','Madi','Mèkredi','Jedi','Vandredi','Samdi'];
+  const MWA = ['janvye','fevriye','mas','avril','me','jen','jiyè','out','septanm','oktòb','novanm','desanm'];
+  return JOU[d.getDay()]+' '+d.getDate()+' '+MWA[d.getMonth()]+(d.getFullYear()!==now.getFullYear() ? ' '+d.getFullYear() : '');
 }
 /* Bati lis bul mesaj yo ak yon ti chip dat chak fwa jou a chanje. */
 function msgBubblesWithDatesHtml(msgs, role, teacher){
@@ -1579,7 +1581,7 @@ function fmtMsgTime(ts){ const d=new Date(ts); return d.toLocaleDateString('fr-F
 function fmtTimeOnly(ts){ return new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 const MSG_EDIT_WINDOW_MS = 15*60*1000;
 const MSG_DELETE_ALL_WINDOW_MS = 30*60*1000;
-/* Mesaj yo vizib pou yon wòl (role) sof si wòl la te "Supprimer pour moi" sou yo */
+/* Mesaj yo vizib pou yon wòl (role) sof si wòl la te efase yo pou li sèlman */
 function visibleMessagesFor(teacherId, role){ return teacherMessagesList(teacherId).filter(m=>!(m.deletedFor||[]).includes(role)); }
 function lastVisibleMessage(teacherId, role){ const l = visibleMessagesFor(teacherId, role); return l.length? l[l.length-1] : null; }
 function canEditMsg(m, role){ return m.sender===role && !m.deletedForEveryone && (Date.now()-m.ts)<=MSG_EDIT_WINDOW_MS; }
@@ -1620,12 +1622,13 @@ function renderMsgBubble(m, role, teacher){
   if(m.deletedForEveryone){
     return `<div class="msg-row ${mine?'mine':''}">
       ${msgRowAvatarHtml(av)}
-      <div class="msg-bubble ${mine?'mine':'theirs'} deleted" data-msg-id="${m.id}">Ce message a été supprimé pour tout le monde.</div>
+      <div class="msg-bubble ${mine?'mine':'theirs'} deleted" data-msg-id="${m.id}">Mesaj sa a efase pou tout moun.</div>
     </div>`;
   }
   const senderAdminRec = m.sender==='admin' ? (DATA.admins||[]).find(a=>a.username===m.senderUsername) : null;
-  const label = (mine ? (role==='admin'?'Administration':'Ou') : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : 'Administration')) + (hasBlueBadge(senderAdminRec) ? verifiedBadgeHtml() : '');
-  const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifié à ${fmtTimeOnly(m.editedAt)}</span>` : '';
+  const admName = senderAdminRec && senderAdminRec.name ? escapeHtml(senderAdminRec.name) : 'Administration';
+  const label = (mine ? 'Ou' : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : admName)) + (hasBlueBadge(senderAdminRec) ? verifiedBadgeHtml() : '');
+  const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifye a ${fmtTimeOnly(m.editedAt)}</span>` : '';
   const photoOnly = m.photo && !m.text;
   const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
   const ticksHtml = mine ? msgStatusTicksHtml(m, isRecipientOnline(role, teacher)) : '';
@@ -1681,20 +1684,20 @@ function renderMsgActionSheet(teacherId, role, teacher){
   const m = visibleMessagesFor(teacherId, role).find(x=>x.id===ui.msgActionFor);
   if(!m) return '';
   if(m.deletedForEveryone){
-    const btns = `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Supprimer pour moi</button>
-    <button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Annuler</button>`;
+    const btns = `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button>
+    <button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Anile</button>`;
     return `<div class="msg-action-overlay" data-msg-action-close="1"><div class="msg-action-sheet" data-msg-sheet="1">${btns}</div></div>`;
   }
   const mine = m.sender===role;
   let btns = '';
   if(mine){
     if(canEditMsg(m, role)) btns += `<button type="button" class="msg-action-btn" data-msg-edit-start="${m.id}">✏️ Modifier</button>`;
-    btns += `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Supprimer pour moi</button>`;
-    if(canDeleteAllMsg(m, role)) btns += `<button type="button" class="msg-action-btn danger" data-msg-delete-all="${m.id}">🗑️ Supprimer pour tout le monde</button>`;
+    btns += `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button>`;
+    if(canDeleteAllMsg(m, role)) btns += `<button type="button" class="msg-action-btn danger" data-msg-delete-all="${m.id}">🗑️ Efase pou tout moun</button>`;
   } else {
-    btns += `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Supprimer pour moi</button>`;
+    btns += `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button>`;
   }
-  btns += `<button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Annuler</button>`;
+  btns += `<button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Anile</button>`;
   return `<div class="msg-action-overlay" data-msg-action-close="1"><div class="msg-action-sheet" data-msg-sheet="1">${btns}</div></div>`;
 }
 /* Branche tout evenman popup/aksyon/edit pou yon konvèsasyon (itilize pou admin ak pwofesè) */
@@ -1788,7 +1791,7 @@ function wireMessageThread(teacherId, role, rerender){
     const id = el.dataset.msgDeleteAll;
     const m = ensureMessages().find(x=>x.id===id);
     if(m){
-      if(!canDeleteAllMsg(m, role)){ await showAlert('Delè "Supprimer pour tout le monde" a (30 minit) pase.'); ui.msgActionFor=null; rerender(); return; }
+      if(!canDeleteAllMsg(m, role)){ await showAlert('Delè pou efase mesaj la pou tout moun (30 minit) pase.'); ui.msgActionFor=null; rerender(); return; }
       m.deletedForEveryone = true; m.deletedAt = Date.now(); m.text='';
     }
     ui.msgActionFor = null;
@@ -2326,7 +2329,7 @@ function notifyNewMessage(m, role){
     title: `Nouvo mesaj de ${fromLabel}`,
     message: preview,
     onClick: ()=>{
-      if(role==='admin'){ ui.adminView='mesaj'; ui.msgTeacherId=m.teacherId; ui.msgShowProfile=false; render('admin'); }
+      if(role==='admin'){ ui.adminView='mesaj'; ui.msgMeda=false; ui.msgTeacherId=m.teacherId; ui.msgShowProfile=false; render('admin'); }
       else { ui.teacherView='mesaj'; render('teacher'); }
     }
   });
@@ -3276,7 +3279,7 @@ function adminHome(me){
   const maxEvo = Math.max(1, ...evo.map(e=>e.avg||0));
   return `
   <div class="page-head">
-    <h1 class="page-title">Bonjou, ${escapeHtml(me.name)}</h1>
+    <h1 class="page-title">Bonjou, ${escapeHtml(me.name)}${hasBlueBadge(me)?verifiedBadgeHtml(20):''}</h1>
     <p class="page-sub">Apèsi jeneral sou ${escapeHtml(DATA.schoolName)} · Ane akademik: <strong>${escapeHtml(DATA.activeYear||'')}</strong></p>
   </div>
   <div class="stat-row">
@@ -3719,13 +3722,22 @@ function adminMessages(){
   });
   if(ui.msgTeacherId===undefined) ui.msgTeacherId=null;
   const isNarrow = window.innerWidth <= 900;
+  const medaOpen = !!(ui.msgMeda && WALLET.welcome);
+  if(medaOpen){ ui.msgTeacherId = null; ui.msgShowProfile = false; }
   const selected = findTeacherById(ui.msgTeacherId);
+  const medaUnseen = !medaOpen && medaWelcomeUnseen();
+  const medaItem = WALLET.welcome ? `<button type="button" class="msg-convo-item ${medaOpen?'active':''} ${medaUnseen?'unread':''}" data-msg-meda="1">
+      <div class="msg-avatar" style="background:#1877F2">M</div>
+      <div style="flex:1;min-width:0"><div class="nm">Meda${verifiedBadgeHtml()}</div><div class="sub">🎁 Byenveni! Ou resevwa ${escapeHtml(fmtG(WALLET.welcome.amount))} G kado</div></div>
+      ${medaUnseen?'<span class="sb-badge">1</span>':''}
+    </button>` : '';
+  if(medaOpen) medaWelcomeMarkSeen();
   const list = teachers.map(t=>{
     const unread = unreadFromTeacher(t.id);
     const last = lastVisibleMessage(t.id, 'admin');
     const lastLabel = !last ? escapeHtml(teacherAssignmentsLabel(t.id))
-      : last.deletedForEveryone ? 'Ce message a été supprimé pour tout le monde.'
-      : escapeHtml((last.sender==='admin'?'Ou: ':'')+(last.text||'').slice(0,32));
+      : last.deletedForEveryone ? 'Mesaj sa a efase pou tout moun.'
+      : escapeHtml((last.sender==='admin'?'Ou: ':'')+(last.text ? (last.text.length>32 ? last.text.slice(0,32).trim()+'…' : last.text) : (last.photo ? '📷 Foto' : '')));
     return `<button type="button" class="msg-convo-item ${t.id===ui.msgTeacherId?'active':''} ${unread>0?'unread':''}" data-msg-teacher="${t.id}">
       <div class="msg-avatar" style="background:${colorFor(teacherDisplayName(t))}">${t.photo? `<img src="${t.photo}" style="width:100%;height:100%;object-fit:cover">` : initialsOf(teacherDisplayName(t))}</div>
       <div style="flex:1;min-width:0">
@@ -3735,7 +3747,8 @@ function adminMessages(){
       ${unread>0?`<span class="sb-badge">${unread>9?'9+':unread}</span>`:''}
     </button>`;
   }).join('');
-  const thread = ui.msgShowProfile && selected ? adminTeacherProfileView(selected)
+  const thread = medaOpen ? medaWelcomeThread()
+    : ui.msgShowProfile && selected ? adminTeacherProfileView(selected)
     : selected ? adminMessageThread(selected)
     : `<div class="empty-state">Chwazi yon pwofesè pou wè konvèsasyon an.</div>`;
   return `
@@ -3743,8 +3756,8 @@ function adminMessages(){
     <h1 class="page-title">Messages</h1>
     <p class="page-sub">Kominike ak pwofesè yo — chak pwofesè se yon sèl konvèsasyon, menm si li anseye plizyè klas.</p>
   </div>
-  <div class="msg-layout ${selected&&isNarrow?'has-open':''}">
-    <div class="msg-convo-list">${list || '<div class="empty-state">Pa gen pwofesè ankò.</div>'}</div>
+  <div class="msg-layout ${(selected||medaOpen)&&isNarrow?'has-open':''}">
+    <div class="msg-convo-list">${medaItem}${list || (medaItem ? '' : '<div class="empty-state">Pa gen pwofesè ankò.</div>')}</div>
     <div class="msg-thread">${thread}</div>
   </div>`;
 }
@@ -3898,7 +3911,7 @@ const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMo
 const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
-const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, vipUntil:0, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
+const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
 const OWNER = { ref:null, handler:null, list:[], known:null };
 let SERVER_OFFSET = 0, _offsetRef = null;
 /* ===== Prezans (anliy/òfliy) — pou ba "livre" a sèlman parèt si moun nan
@@ -4018,6 +4031,8 @@ function walletRecompute(v){
     if(x.kind==='fontpass') pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
     if(x.kind==='vippass') vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
   });
+  const wc = credits.welcome;
+  WALLET.welcome = (wc && typeof wc==='object') ? { ts:Number(wc.ts)||0, amount:Number(wc.amount)||0 } : null;
   WALLET.balance = Math.round((cr-sp)*100)/100;
   WALLET.fontPassUntil = pass;
   WALLET.vipUntil = vip;
@@ -4033,7 +4048,7 @@ function ownerFlatten(v){
   out.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   return out;
 }
-function ownerPendingCount(){ return OWNER.list.filter(r=>r.status==='pending').length; }
+function ownerPendingCount(){ return OWNER.list.filter(r=>r.status==='pending' && r.id!=='welcome').length; }
 function walletUpdateBadge(){
   const b = document.getElementById('wal-badge');
   if(!b) return;
@@ -4061,7 +4076,7 @@ function startWalletWatch(){
       _offsetRef = fbDb.ref('.info/serverTimeOffset');
       _offsetRef.on('value', sn=>{ SERVER_OFFSET = Number(sn.val())||0; });
       WALLET.ref = fbDb.ref('wallets/'+u.uid);
-      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; walletRefreshUI(); };
+      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; walletRefreshUI(); walletMaybeClaimWelcome(); };
       WALLET.ref.on('value', WALLET.handler, err=>{ WALLET.error = (err && err.code) || 'erè'; WALLET.loaded=true; walletRefreshUI(); });
       WALLET.reqRef = fbDb.ref('paymentRequests/'+u.uid);
       WALLET.reqHandler = snap=>{
@@ -4071,12 +4086,13 @@ function startWalletWatch(){
           list.forEach(r=>{
             if(WALLET.reqStatus[r.id]==='pending' && r.status==='verified'){
               playNotifSound();
-              showToast({title:'Peman verifye', message:'+'+fmtG(r.amount)+' G ajoute sou balans ou.'});
+              if(r.id==='welcome') showToast({title:'Byenveni sou Meda 🎁', message:'Ou resevwa '+fmtG(r.amount)+' G kado sou balans ou.', onClick:()=>{ ui.adminView='mesaj'; ui.msgMeda=true; ui.msgTeacherId=null; render('admin'); }});
+              else showToast({title:'Peman verifye', message:'+'+fmtG(r.amount)+' G ajoute sou balans ou.'});
             }
           });
         }
         WALLET.reqStatus = {}; list.forEach(r=>{ WALLET.reqStatus[r.id]=r.status; });
-        WALLET.reqs = list;
+        WALLET.reqs = list.filter(r=>r.id!=='welcome');
         walletRefreshUI();
       };
       WALLET.reqRef.on('value', WALLET.reqHandler, ()=>{});
@@ -4084,12 +4100,86 @@ function startWalletWatch(){
   }
   if(isOwner()) startOwnerWatch(); else stopOwnerWatch();
 }
+/* ---- KADO BYENVENI (25 G) + MESAJ OTOMATIK SOTI NAN PWOPRIYETÈ A ----
+   Chak nouvo kont admin (kreye depi mwens pase 3 jou) resevwa YON SÈL fwa
+   25 G kado. Kado a ekri nan wallets/{uid}/credits/welcome (kle fiks = li pa
+   ka double). Mesaj byenveni an parèt nan Messages (konvèsasyon "Meda"). */
+const WELCOME_GIFT = 25;
+const WELCOME_TXID = 'BYENVENI-AUTO';
+const WELCOME_MAX_AGE_MS = 3*86400000;
+async function walletMaybeClaimWelcome(){
+  try{
+    if(WALLET.welcomeTried || WALLET.welcome || !WALLET.loaded || WALLET.error) return;
+    const u = (FIREBASE_ENABLED && fbAuth) ? fbAuth.currentUser : null;
+    if(!u || u.isAnonymous || isOwner() || !fbDb || WALLET.uid!==u.uid) return;
+    const created = Date.parse(u.metadata && u.metadata.creationTime) || 0;
+    if(!created || (Date.now()-created) > WELCOME_MAX_AGE_MS) return;
+    WALLET.welcomeTried = true;
+    /* Règ Firebase yo pa kite itilizatè a ekri nan credits. Kidonk li kreye
+       yon demann espesyal (paymentRequests/{uid}/welcome, status pending) —
+       kle fiks 'welcome' = yon sèl fwa pa kont. Kont pwopriyetè a (lè l
+       konekte) apwouve l otomatikman: gade ownerAutoWelcome(). */
+    await withTimeout(fbDb.ref('paymentRequests/'+u.uid+'/welcome').set({
+      amount:WELCOME_GIFT, txid:WELCOME_TXID, phone:'AUTO', status:'pending', createdAt:serverTs(),
+      name:String((currentAdmin()&&currentAdmin().name)||'').slice(0,120), email:String(u.email||'').slice(0,120)
+    }), 9000);
+  }catch(e){ console.warn('Kado byenveni', e); }
+}
+/* Pwopriyetè a (konekte ak modpas) apwouve kado byenveni yo otomatikman:
+   sèlman demann ki rele 'welcome', ak txid fiks la, e montan egzakteman
+   WELCOME_GIFT. Lòt montan = pa touche, ap rete an atant pou verifye manyèlman. */
+const _welcomeBusy = {};
+async function ownerAutoWelcome(list){
+  try{
+    if(!isOwner() || !fbDb) return;
+    const me = fbAuth.currentUser;
+    for(const r of list){
+      if(r.id!=='welcome' || r.status!=='pending' || r.txid!==WELCOME_TXID || Number(r.amount)!==WELCOME_GIFT) continue;
+      if(r.uid===me.uid || _welcomeBusy[r.uid]) continue;
+      _welcomeBusy[r.uid] = true;
+      const up = {};
+      up['wallets/'+r.uid+'/credits/welcome'] = { amount:WELCOME_GIFT, ts:serverTs(), by:me.uid, req:'welcome', kind:'welcome' };
+      up['paymentRequests/'+r.uid+'/welcome/status'] = 'verified';
+      up['paymentRequests/'+r.uid+'/welcome/verifiedAt'] = serverTs();
+      try{ await withTimeout(fbDb.ref().update(up), 9000); }
+      catch(e){ console.warn('Kado byenveni (apwobasyon)', e); delete _welcomeBusy[r.uid]; }
+    }
+  }catch(e){ console.warn(e); }
+}
+function medaWelcomeSeenKey(){ return 'meda_wlc_seen_'+(WALLET.uid||''); }
+function medaWelcomeUnseen(){
+  if(!WALLET.welcome) return false;
+  try{ return localStorage.getItem(medaWelcomeSeenKey())!=='1'; }catch(e){ return false; }
+}
+function medaWelcomeMarkSeen(){ try{ localStorage.setItem(medaWelcomeSeenKey(),'1'); }catch(e){} }
+function medaWelcomeThread(){
+  const me = currentAdmin() || {};
+  const w = WALLET.welcome || { ts:Date.now(), amount:WELCOME_GIFT };
+  const av = { photo:null, label:'Meda', color:'#1877F2' };
+  const txt = 'Bonjou '+(me.name||'')+' ! 👋\n\nByenveni sou Meda. Nou kontan wè w rejwenn nou.\n\nPou swete w byenveni, nou ofri w '+fmtG(w.amount)+' G kado — yo deja ajoute sou balans ou. Ou ka sèvi ak yo pou modèl, estil ak dokiman premium.\n\nSi w bezwen nenpòt èd, ale nan Èd & Sipò epi ekri nou.\n\nMèsi pou konfyans ou, epi bon travay ! 🎓\n— Ekip Meda';
+  return `
+  ${window.innerWidth<=900?`<a class="msg-back" data-msg-back="1">${ICONS.back}Tounen</a>`:''}
+  <div class="msg-thread-head">
+    <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+      <div class="msg-avatar sm" style="background:#1877F2">M</div>
+      <div><div class="nm">Meda${verifiedBadgeHtml()}</div><div class="sub">Mesaj otomatik · Sistèm Meda</div></div>
+    </div>
+  </div>
+  <div class="msg-bubbles" id="msg-bubbles">
+    <div class="msg-day-sep"><span>${escapeHtml(fmtDayLabel(w.ts))}</span></div>
+    <div class="msg-row">
+      ${msgRowAvatarHtml(av)}
+      <div class="msg-bubble theirs" style="white-space:pre-wrap">${escapeHtml(txt)}<span class="meta">Meda${verifiedBadgeHtml()} · ${fmtTimeOnly(w.ts)}</span></div>
+    </div>
+  </div>
+  <div class="hint" style="text-align:center;padding:10px">Mesaj otomatik — pa gen repons posib. Pou kontakte nou, itilize Èd & Sipò.</div>`;
+}
 function stopWalletWatch(){
   try{ if(WALLET.ref && WALLET.handler) WALLET.ref.off('value', WALLET.handler); }catch(e){}
   try{ if(WALLET.reqRef && WALLET.reqHandler) WALLET.reqRef.off('value', WALLET.reqHandler); }catch(e){}
   try{ if(_offsetRef) _offsetRef.off(); }catch(e){}
   WALLET.uid=null; WALLET.ref=null; WALLET.handler=null; WALLET.reqRef=null; WALLET.reqHandler=null;
-  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.vipUntil=0; WALLET.reqs=[];
+  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.vipUntil=0; WALLET.welcome=null; WALLET.welcomeTried=false; WALLET.reqs=[];
   _offsetRef = null;
   stopOwnerWatch();
 }
@@ -4101,7 +4191,7 @@ function startOwnerWatch(){
       const list = ownerFlatten(snap.val());
       if(OWNER.known){
         list.forEach(r=>{
-          if(r.status==='pending' && !OWNER.known[r.id]){
+          if(r.status==='pending' && r.id!=='welcome' && !OWNER.known[r.id]){
             playNotifSound();
             showToast({title:'Nouvo peman', message:(r.name||r.email||'Itilizatè')+' — '+fmtG(r.amount)+' G', onClick:()=>{ ui.adminView='wal'; ui.walOwner=true; render('admin'); }});
           }
@@ -4109,6 +4199,7 @@ function startOwnerWatch(){
       }
       OWNER.known = {}; list.forEach(r=>{ OWNER.known[r.id]=1; });
       OWNER.list = list;
+      ownerAutoWelcome(list);
       walletRefreshUI();
     };
     OWNER.ref.on('value', OWNER.handler, ()=>{});
@@ -4458,16 +4549,33 @@ function helpAccountUid(){
   return '';
 }
 function helpBuildMail(me, f){
-  const subject = '[Meda] ' + f.type + ' — ' + (f.name || 'Administratè');
+  const nom = f.name || 'Administratè';
+  const subject = '[Meda] ' + f.type + ' — ' + nom + (DATA.schoolName ? ' (' + DATA.schoolName + ')' : '');
+  const now = new Date();
+  const dat = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+  const ler = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  const hr = now.getHours();
+  const salitasyon = hr >= 18 ? 'Bonswa' : 'Bonjou';
   const lines = [
-    'Bonjou sipò,', '', f.msg, '',
-    '----------------',
-    'Non: ' + f.name,
-    'Imèl kont: ' + (f.email || '(pa disponib)'),
-    'Kalite demann: ' + f.type,
-    'Lekòl: ' + (DATA.schoolName || ''),
-    'ID kont: ' + (helpAccountUid() || '(pa disponib)'),
-    'Aparèy: ' + String(navigator.userAgent || '').slice(0,120)
+    salitasyon + ' ekip sipò Meda,', '',
+    'Mwen se ' + nom + (DATA.schoolName ? ', administratè nan ' + DATA.schoolName : '') + '. Mwen ap kontakte w konsènan yon demann ki nan kategori « ' + f.type + ' ».', '',
+    'DETAY DEMANN NAN',
+    '----------------------------------------',
+    f.msg, '',
+    'ENFÒMASYON KONT LAN',
+    '----------------------------------------',
+    'Non konplè : ' + nom,
+    'Imèl kont : ' + (f.email || '(pa disponib)'),
+    'Etablisman : ' + (DATA.schoolName || '(pa disponib)'),
+    'ID kont : ' + (helpAccountUid() || '(pa disponib)'),
+    'Kalite demann : ' + f.type,
+    'Vèsyon app : v' + APP_VERSION,
+    'Dat ak lè : ' + dat + ' a ' + ler,
+    'Aparèy : ' + String(navigator.userAgent || '').slice(0,120), '',
+    'Mwen ta apresye yon repons nan pi bon delè posib. Si w bezwen plis enfòmasyon oswa kapti ekran, m prè pou m voye yo.', '',
+    'Mèsi anpil pou tan w ak sipò w.', '',
+    'Avèk respè,',
+    nom
   ];
   const body = lines.join('\n');
   return { subject, body, url: 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) };
@@ -6919,10 +7027,13 @@ function wireEvents(view){
     }
     if(ui.adminView==='mesaj'){
       document.querySelectorAll('[data-msg-teacher]').forEach(b=>b.addEventListener('click', ()=>{
-        ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; ui.msgComposePhoto=null; ui.msgSelectMode=false; ui.msgSelectedIds=[]; render('admin');
+        ui.msgMeda=false; ui.msgTeacherId = b.dataset.msgTeacher; ui.msgShowProfile=false; ui.msgComposePhoto=null; ui.msgSelectMode=false; ui.msgSelectedIds=[]; render('admin');
       }));
       const backBtn = document.querySelector('[data-msg-back]');
-      if(backBtn) backBtn.addEventListener('click', ()=>{ ui.msgTeacherId=null; ui.msgShowProfile=false; render('admin'); });
+      if(backBtn) backBtn.addEventListener('click', ()=>{ ui.msgTeacherId=null; ui.msgMeda=false; ui.msgShowProfile=false; render('admin'); });
+      document.querySelectorAll('[data-msg-meda]').forEach(b=>b.addEventListener('click', ()=>{
+        ui.msgMeda=true; ui.msgTeacherId=null; ui.msgShowProfile=false; ui.msgSelectMode=false; ui.msgSelectedIds=[]; render('admin');
+      }));
       const openProfileBtn = document.querySelector('[data-msg-open-profile]');
       if(openProfileBtn) openProfileBtn.addEventListener('click', ()=>{ ui.msgShowProfile=true; render('admin'); });
       const backProfileBtn = document.querySelector('[data-msg-back-profile]');
