@@ -5355,31 +5355,78 @@ function printSchedule(cls){
 }
 
 /* ===================== PRINTING ===================== */
-/* ---- Enprime ak yon rezèv pou APK/WebView : anpil zouti ki tranfòme yon
-   sit HTML an APK (Median.co, GoNative, WebViewGold, elatriye) sipòte
-   window.print() san pwoblèm depi ou aktive opsyon "Print support" lè w
-   kreye APK la. Men si pou yon rezon konfigirasyon window.print() pa
-   disponib oswa pa reponn nan yon WebView, fonksyon sa a otomatikman
-   telechaje yon kopi HTML endepandan (ak menm style/prezantasyon an)
-   moun nan ka louvri nan Chrome oswa nan yon aplikasyon enprime pou l
-   enprime l kanmenm — enpresyon pa janm rete bloke nèt. ---- */
-function triggerPrint(filenameBase){
-  /* Nan navigatè òdinè, window.print() fè evènman "beforeprint" LAD ANVAN
-     bwat dyalòg la louvri. Nan sèten WebView (APK) window.print() pa fè
-     anyen ditou: nou pa wè okenn "beforeprint". Nan ka sa a, nou pa
-     bloke itilizatè a — nou ba l yon ti ba anba (pa yon gwo notifikasyon
-     ki kouvri ekran an) ak yon bouton pou louvri dokiman an nan yon paj plen
-     kote li ka enprime, telechaje oswa pataje l. */
+/* Enprime ak telechaje — vèsyon solid pou APK/WebView.
+   1) "Enprime" : window.print() rele DIRÈKTEMAN nan menm klik la (menm jan ak anvan),
+      san okenn bloke. Si WebView la pa louvri fenèt enprime a, yon ti ba ofri PDF la.
+   2) "Telechaje" : kounye a kreye yon VRE PDF (A4) dirèkteman nan aparèy la, san entènèt
+      ni bibliyotèk deyò. Li pa depann de "Print support" nan APK la. Apre sa li eseye
+      pataje/telechaje l, epi li montre yon kat ak bouton "Sove / Louvri / Pataje"
+      si telefòn nan pa t kòmanse telechajman an poukont li. */
+const PRINT_STATE = { doc:null, pdf:null, busy:false };
+const PDF_PAGE = {
+  portrait : { w:794,  h:1123, mx:53, my:45 },  /* A4 pòtrè, mach 12mm/14mm (menm jan ak @page) */
+  landscape: { w:1123, h:794,  mx:45, my:38 }   /* A4 peyizaj, mach 10mm/12mm */
+};
+function printSafeName(n){
+  return String(n||'dokiman').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9-_ ]/g,'').trim().replace(/\s+/g,'-') || 'dokiman';
+}
+function printToast(msg, ms){
+  const old = document.getElementById('print-toast'); if(old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'print-toast'; t.className = 'no-print';
+  t.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:9800;background:#1c1e21;color:#fff;border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.4;box-shadow:0 6px 24px rgba(0,0,0,.35);text-align:center';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ if(t.parentNode) t.remove(); }, ms||4500);
+}
+function printBusy(on, msg){
+  let el = document.getElementById('print-busy');
+  if(!on){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'print-busy'; el.className = 'no-print';
+    el.style.cssText = 'position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div style="background:#fff;border-radius:16px;padding:20px 26px;font-size:15px;font-weight:700;color:#1c1e21;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)">'
+    + '<div style="width:34px;height:34px;margin:0 auto 12px;border-radius:50%;border:4px solid #dbe7fd;border-top-color:#1877F2;animation:boot-spin .8s linear infinite"></div>'
+    + escapeHtml(msg||'Ap prepare...') + '</div>';
+}
+
+/* ---- Enprime ---- */
+function setPrintOrientation(mode){
+  let tag = document.getElementById('print-orientation-style');
+  if(!tag){
+    tag = document.createElement('style');
+    tag.id = 'print-orientation-style';
+    document.head.appendChild(tag);
+  }
+  tag.textContent = mode==='landscape' ? '@page{ size:A4 landscape; margin:10mm 12mm; }' : '';
+}
+function runWindowPrint(onResult){
+  /* Retounen true si navigatè a/WebView la reyèlman reponn (evènman beforeprint/afterprint). */
   let fired = false;
-  const onBefore = ()=>{ fired = true; };
-  window.addEventListener('beforeprint', onBefore);
+  const mark = ()=>{ fired = true; };
+  window.addEventListener('beforeprint', mark);
+  window.addEventListener('afterprint', mark);
   let threw = false;
   try{ if(typeof window.print === 'function') window.print(); else threw = true; }
   catch(e){ threw = true; }
   setTimeout(()=>{
-    window.removeEventListener('beforeprint', onBefore);
-    if(threw || !fired) showPrintHelpBar(filenameBase);
-  }, threw ? 0 : 900);
+    window.removeEventListener('beforeprint', mark);
+    window.removeEventListener('afterprint', mark);
+    onResult(!threw && fired, threw);
+  }, threw ? 0 : 1300);
+}
+function triggerPrint(filenameBase, orient){
+  orient = orient==='landscape' ? 'landscape' : 'portrait';
+  PRINT_STATE.doc = { name: filenameBase, orient };
+  setPrintOrientation(orient);   /* toujou reyajiste: pa gen oryantasyon ki rete bloke */
+  runWindowPrint((ok, threw)=>{
+    if(ok) return;
+    if(threw){ openPrintViewer(filenameBase); return; }
+    showPrintHelpBar(filenameBase);
+  });
 }
 function removePrintHelpBar(){ const b = document.getElementById('print-help-bar'); if(b) b.remove(); }
 function showPrintHelpBar(filenameBase){
@@ -5387,58 +5434,324 @@ function showPrintHelpBar(filenameBase){
   const bar = document.createElement('div');
   bar.id = 'print-help-bar';
   bar.className = 'no-print';
-  bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;background:#1c1e21;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px;line-height:1.35';
-  bar.innerHTML = '<div style="flex:1;min-width:0">Bwat enpresyon an pa louvri?</div>'
-    + '<button type="button" id="phb-open" style="background:#1877F2;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Louvri dokiman an</button>'
+  bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;background:#1c1e21;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px;line-height:1.35';
+  bar.innerHTML = '<div style="flex:1;min-width:0">Fenèt enprime a pa louvri?</div>'
+    + '<button type="button" id="phb-pdf" style="background:#1877F2;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Telechaje PDF</button>'
+    + '<button type="button" id="phb-open" style="background:#3a3d42;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Louvri</button>'
     + '<button type="button" id="phb-close" aria-label="Fèmen" style="background:transparent;color:#bbb;border:0;font-size:22px;line-height:1;padding:0 4px">&times;</button>';
   document.body.appendChild(bar);
   document.getElementById('phb-close').onclick = removePrintHelpBar;
+  document.getElementById('phb-pdf').onclick = ()=>{ removePrintHelpBar(); downloadPrintPdf(filenameBase); };
   document.getElementById('phb-open').onclick = ()=>{ removePrintHelpBar(); openPrintViewer(filenameBase); };
-  setTimeout(removePrintHelpBar, 15000);
+  setTimeout(removePrintHelpBar, 20000);
 }
-/* Paj plen: montre dokiman an (menm kontni #print-area) ak aksyon yo ki
-   toujou disponib: Enprime (re-eseye), Telechaje, Pataje. */
+
+/* ---- Paj plen (apèsi) : Enprime / Telechaje PDF / Pataje ---- */
 function openPrintViewer(filenameBase){
   const area = document.getElementById('print-area');
   if(!area || !area.innerHTML.trim()){ showAlert('Pa gen dokiman pou montre.'); return; }
+  const doc = PRINT_STATE.doc || { name: filenameBase, orient:'portrait' };
+  const pg = PDF_PAGE[doc.orient] || PDF_PAGE.portrait;
   const old = document.getElementById('print-viewer'); if(old) old.remove();
   const ov = document.createElement('div');
   ov.id = 'print-viewer';
   ov.className = 'no-print';
   ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:#e9ebee;display:flex;flex-direction:column';
   const btn = 'border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px;';
+  const canShare = !!(navigator.canShare && typeof File==='function');
   ov.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#fff;border-bottom:1px solid #dcdfe3;flex-wrap:wrap">
       <button type="button" id="pv-close" style="${btn}background:#e7f0fe;color:#1877F2">← Tounen</button>
       <span style="flex:1"></span>
       <button type="button" id="pv-print" style="${btn}background:#1877F2;color:#fff">Enprime</button>
       <button type="button" id="pv-dl" style="${btn}background:#e7f0fe;color:#1877F2">Telechaje</button>
-      ${navigator.share ? `<button type="button" id="pv-share" style="${btn}background:#e7f0fe;color:#1877F2">Pataje</button>` : ''}
+      ${canShare ? `<button type="button" id="pv-share" style="${btn}background:#e7f0fe;color:#1877F2">Pataje</button>` : ''}
     </div>
     <div id="pv-scroll" style="flex:1;overflow:auto;padding:10px;-webkit-overflow-scrolling:touch">
-      <div id="pv-page" style="width:794px;max-width:none;margin:0 auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);padding:10px;box-sizing:border-box">${area.innerHTML}</div>
+      <div id="pv-page" style="width:${pg.w}px;max-width:none;margin:0 auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);padding:${pg.my}px ${pg.mx}px;box-sizing:border-box">${area.innerHTML}</div>
     </div>`;
   document.body.appendChild(ov);
   const page = ov.querySelector('#pv-page');
-  const fit = ()=>{ const z = Math.min(1, (window.innerWidth-20)/794); page.style.zoom = z; };
+  const fit = ()=>{ page.style.zoom = Math.min(1, (window.innerWidth-20)/pg.w); };
   fit();
   ov.querySelector('#pv-close').onclick = ()=>ov.remove();
-  ov.querySelector('#pv-print').onclick = ()=>{ try{ window.print(); }catch(e){ showAlert('Enprime a pa disponib sou aparèy sa a. Itilize «Telechaje» oswa «Pataje».'); } };
-  ov.querySelector('#pv-dl').onclick = ()=>downloadPrintAreaAsHtml(filenameBase);
-  const sh = ov.querySelector('#pv-share');
-  if(sh) sh.onclick = async ()=>{
-    try{
-      const styles = Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
-      const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(filenameBase||'Dokiman')}</title><style>${styles}\nbody{margin:0;background:#fff;} #print-area{display:block !important;}</style></head><body><div id="print-area">${area.innerHTML}</div></body></html>`;
-      const file = new File([doc], String(filenameBase||'dokiman').replace(/[^a-zA-Z0-9-_]/g,'-')+'.html', {type:'text/html'});
-      if(navigator.canShare && navigator.canShare({files:[file]})) await navigator.share({files:[file], title:String(filenameBase||'Dokiman')});
-      else await navigator.share({title:String(filenameBase||'Dokiman'), text:'Dokiman Meda'});
-    }catch(e){ if(!(e && e.name==='AbortError')) downloadPrintAreaAsHtml(filenameBase); }
+  ov.querySelector('#pv-print').onclick = ()=>{
+    setPrintOrientation(doc.orient);
+    runWindowPrint((ok)=>{ if(!ok) printToast('Enprime a pa reponn sou aparèy sa a. Peze «Telechaje» pou jwenn PDF la, epi enprime l ak aplikasyon PDF ou.', 6500); });
   };
+  ov.querySelector('#pv-dl').onclick = ()=>downloadPrintPdf(doc.name || filenameBase);
+  const sh = ov.querySelector('#pv-share');
+  if(sh) sh.onclick = ()=>sharePrintPdf(doc.name || filenameBase);
 }
-/* ---- Pran tout <style> paj la (menm CSS ki itilize pou apèsi a) epi
-   anfèmen kontni #print-area a nan yon fichye HTML endepandan, ak menm
-   prezantasyon an, moun nan ka telechaje, louvri nan yon lòt navigatè,
-   pataje, oswa enprime san l pa bezwen aplikasyon Jesyon Lekòl la. ---- */
+
+/* ---- Jenere PDF (A4) lokalman : HTML -> imaj (SVG foreignObject + canvas) -> PDF ---- */
+function blobToDataUrl(b){
+  return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = ()=>rej(r.error); r.readAsDataURL(b); });
+}
+function fetchWithTimeout(url, ms){
+  const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  const t = setTimeout(()=>{ if(ctl) ctl.abort(); }, ms||8000);
+  return fetch(url, ctl ? {signal:ctl.signal} : undefined).finally(()=>clearTimeout(t));
+}
+const _pdfFontBlocks = { list:null, data:{} };
+async function pdfFontCssFor(families){
+  /* Entegre sèlman fon Google (latin) ki itilize nan dokiman an, an base64, pou yo parèt nan PDF la. */
+  try{
+    if(_pdfFontBlocks.list===null){
+      const list = [];
+      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis.com"]'));
+      for(const l of links){
+        try{
+          const txt = await (await fetchWithTimeout(l.href, 8000)).text();
+          const re = /\/\*\s*([\w-]+)\s*\*\/\s*(@font-face\s*\{[^}]*\})/g; let m;
+          while((m = re.exec(txt))){
+            if(m[1] !== 'latin') continue;
+            const fam = (/font-family:\s*['"]?([^;'"]+)['"]?/.exec(m[2])||[])[1];
+            if(fam) list.push({family:fam.trim(), css:m[2]});
+          }
+        }catch(e){}
+      }
+      if(list.length) _pdfFontBlocks.list = list; else return '';
+    }
+    let out = '';
+    for(const b of _pdfFontBlocks.list){
+      if(!families.has(b.family)) continue;
+      let css = b.css;
+      const urls = Array.from(new Set(Array.from(css.matchAll(/url\((https:[^)]+)\)/g)).map(x=>x[1])));
+      for(const u of urls){
+        try{
+          if(!_pdfFontBlocks.data[u]) _pdfFontBlocks.data[u] = await blobToDataUrl(await (await fetchWithTimeout(u, 8000)).blob());
+          css = css.split(u).join(_pdfFontBlocks.data[u]);
+        }catch(e){}
+      }
+      out += css + '\n';
+    }
+    return out;
+  }catch(e){ return ''; }
+}
+async function pdfInlineImages(root){
+  const imgs = Array.from(root.querySelectorAll('img'));
+  for(const im of imgs){
+    const src = im.getAttribute('src') || '';
+    if(!src || src.startsWith('data:')) continue;
+    try{ im.setAttribute('src', await blobToDataUrl(await (await fetchWithTimeout(src, 8000)).blob())); }catch(e){}
+  }
+}
+function pdfPageBreaks(box, contentH){
+  /* Koupe sou fwontyè bèl (anba yon ranje tablo, yon paragraf...) pou pa koupe tèks nan mitan. */
+  const total = Math.ceil(box.scrollHeight);
+  const top = box.getBoundingClientRect().top;
+  const cand = [];
+  box.querySelectorAll('*').forEach(el=>{
+    if(el.closest('td,th')) return;
+    const r = el.getBoundingClientRect();
+    if(r.height < 2) return;
+    cand.push(Math.round(r.bottom - top));
+  });
+  cand.sort((a,b)=>a-b);
+  const cuts = [0]; let start = 0;
+  while(total - start > contentH + 1){
+    const target = start + contentH;
+    let best = -1;
+    for(const c of cand){ if(c > start + contentH*0.55 && c <= target) best = c; }
+    const next = best > start ? best : target;
+    cuts.push(next); start = next;
+  }
+  cuts.push(total);
+  return cuts;
+}
+function pdfLoadSvgImage(svg){
+  return new Promise((res, rej)=>{
+    const im = new Image();
+    im.onload = ()=>res(im);
+    im.onerror = ()=>rej(new Error('Rann paj la echwe'));
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+async function renderPrintAreaToPages(orient){
+  const area = document.getElementById('print-area');
+  const pg = PDF_PAGE[orient] || PDF_PAGE.portrait;
+  const contentW = pg.w - 2*pg.mx, contentH = pg.h - 2*pg.my;
+  /* 1) mezire layout la nan yon bwat kache (menm lajè ak zòn kontni paj la) */
+  const box = document.createElement('div');
+  box.setAttribute('aria-hidden', 'true');
+  box.style.cssText = `position:fixed;left:-30000px;top:0;width:${contentW}px;background:#fff;pointer-events:none;`;
+  box.innerHTML = area.innerHTML;
+  document.body.appendChild(box);
+  try{
+    await pdfInlineImages(box);
+    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} }
+    const families = new Set();
+    box.querySelectorAll('*').forEach(el=>{
+      getComputedStyle(el).fontFamily.split(',').forEach(f=>families.add(f.trim().replace(/^['"]|['"]$/g,'')));
+    });
+    const fontCss = await pdfFontCssFor(families);
+    const cuts = pdfPageBreaks(box, contentH);
+    /* 2) kont CSS + kontni an XHTML */
+    const pageCss = Array.from(document.querySelectorAll('style')).filter(s=>s.id!=='print-orientation-style').map(s=>s.textContent).join('\n').replace(/\]\]>/g, ']] >');
+    const bs = getComputedStyle(document.body);
+    const holder = document.createElement('div');
+    holder.id = 'print-area';
+    holder.style.cssText = `display:block;position:relative;width:${contentW}px;background:#fff;font-family:${bs.fontFamily};font-size:${bs.fontSize};line-height:${bs.lineHeight};color:${bs.color};`;
+    holder.innerHTML = box.innerHTML;
+    const xhtml = new XMLSerializer().serializeToString(holder);
+    const S = 2;  /* rezolisyon (2x = ~190 dpi) */
+    const pages = [];
+    for(let i=0; i<cuts.length-1; i++){
+      const off = cuts[i], sliceH = cuts[i+1] - cuts[i];
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pg.w}" height="${pg.h}" viewBox="0 0 ${pg.w} ${pg.h}">`
+        + `<foreignObject x="0" y="0" width="${pg.w}" height="${pg.h}">`
+        + `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${pg.w}px;height:${pg.h}px;background:#fff;position:relative;overflow:hidden">`
+        + `<style><![CDATA[${fontCss}\n${pageCss}\n]]></style>`
+        + `<div style="position:absolute;left:${pg.mx}px;top:${pg.my}px;width:${contentW}px;height:${sliceH}px;overflow:hidden">`
+        + `<div style="position:relative;margin-top:${-off}px;width:${contentW}px">${xhtml}</div></div></div></foreignObject></svg>`;
+      const canvas = document.createElement('canvas');
+      canvas.width = pg.w*S; canvas.height = pg.h*S;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      let im = await pdfLoadSvgImage(svg);
+      if(i===0 && fontCss){ /* premye rann nan chaje fon yo; refè l pou fon yo aplike pou verite */
+        ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+        await new Promise(r=>setTimeout(r, 120));
+        im = await pdfLoadSvgImage(svg);
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const b64 = dataUrl.slice(dataUrl.indexOf(',')+1);
+      const bin = atob(b64); const bytes = new Uint8Array(bin.length);
+      for(let k=0; k<bin.length; k++) bytes[k] = bin.charCodeAt(k);
+      pages.push({ jpeg:bytes, pxW:canvas.width, pxH:canvas.height, ptW:pg.w*0.75, ptH:pg.h*0.75 });
+      await new Promise(r=>setTimeout(r, 0));
+    }
+    return pages;
+  } finally {
+    box.remove();
+  }
+}
+function buildPdfBlob(pages){
+  const enc = new TextEncoder();
+  const chunks = []; let len = 0; const offsets = [];
+  const push = d=>{ const u = (typeof d==='string') ? enc.encode(d) : d; chunks.push(u); len += u.length; };
+  const startObj = n=>{ offsets[n] = len; push(n+' 0 obj\n'); };
+  push('%PDF-1.4\n');
+  push(new Uint8Array([0x25,0xE2,0xE3,0xCF,0xD3,0x0A]));
+  const n = pages.length;
+  startObj(1); push('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  startObj(2); push('<< /Type /Pages /Kids ['+pages.map((_,i)=>(3+3*i)+' 0 R').join(' ')+'] /Count '+n+' >>\nendobj\n');
+  pages.forEach((p, i)=>{
+    const pid = 3+3*i, cid = 4+3*i, iid = 5+3*i;
+    const W = p.ptW.toFixed(2), H = p.ptH.toFixed(2);
+    startObj(pid);
+    push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /XObject << /Im0 '+iid+' 0 R >> /ProcSet [/PDF /ImageC] >> /Contents '+cid+' 0 R >>\nendobj\n');
+    const content = 'q '+W+' 0 0 '+H+' 0 0 cm /Im0 Do Q';
+    startObj(cid);
+    push('<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream\nendobj\n');
+    startObj(iid);
+    push('<< /Type /XObject /Subtype /Image /Width '+p.pxW+' /Height '+p.pxH+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+p.jpeg.length+' >>\nstream\n');
+    push(p.jpeg);
+    push('\nendstream\nendobj\n');
+  });
+  const total = 3*n + 3, xrefPos = len;
+  let x = 'xref\n0 '+total+'\n0000000000 65535 f \n';
+  for(let k=1; k<total; k++) x += String(offsets[k]).padStart(10,'0')+' 00000 n \n';
+  push(x);
+  push('trailer\n<< /Size '+total+' /Root 1 0 R >>\nstartxref\n'+xrefPos+'\n%%EOF');
+  return new Blob(chunks, {type:'application/pdf'});
+}
+async function getPrintPdf(filenameBase){
+  const area = document.getElementById('print-area');
+  if(!area || !area.innerHTML.trim()) throw new Error('Pa gen dokiman pou kreye PDF.');
+  const doc = PRINT_STATE.doc || { name: filenameBase, orient:'portrait' };
+  const html = area.innerHTML;
+  if(PRINT_STATE.pdf && PRINT_STATE.pdf.html===html && PRINT_STATE.pdf.orient===doc.orient) return PRINT_STATE.pdf.blob;
+  const pages = await renderPrintAreaToPages(doc.orient);
+  const blob = buildPdfBlob(pages);
+  PRINT_STATE.pdf = { html, orient:doc.orient, blob };
+  return blob;
+}
+function pdfAnchorDownload(blob, fileName){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName; a.rel = 'noopener'; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ a.remove(); }, 1000);
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+}
+function pdfOpenBlob(blob){
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if(!w) location.href = url;
+  setTimeout(()=>URL.revokeObjectURL(url), 120000);
+}
+async function pdfShareBlob(blob, fileName, title){
+  const file = new File([blob], fileName, {type:'application/pdf'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    await navigator.share({files:[file], title:title||fileName});
+    return true;
+  }
+  return false;
+}
+function showPdfReadyCard(blob, fileName, title){
+  const old = document.getElementById('pdf-ready'); if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'pdf-ready'; ov.className = 'no-print';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9950;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))';
+  const btn = 'flex:1;border:0;border-radius:22px;padding:12px 10px;font-weight:700;font-size:14px;';
+  const kb = Math.max(1, Math.round(blob.size/1024));
+  const canShare = !!(navigator.canShare && typeof File==='function');
+  ov.innerHTML = `<div style="width:100%;max-width:460px;background:#fff;border-radius:18px;padding:18px 16px 14px;box-shadow:0 10px 36px rgba(0,0,0,.35)">
+      <div style="font-size:16px;font-weight:800;color:#1c1e21;margin-bottom:4px">PDF a pare ✓</div>
+      <div style="font-size:13px;color:#65676b;margin-bottom:14px;word-break:break-all">${escapeHtml(fileName)} · ${kb} Ko<br>Si telechajman an pa t kòmanse poukont li, itilize bouton yo anba a.</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" id="pr-save" style="${btn}background:#1877F2;color:#fff">Sove</button>
+        <button type="button" id="pr-open" style="${btn}background:#e7f0fe;color:#1877F2">Louvri</button>
+        ${canShare ? `<button type="button" id="pr-share" style="${btn}background:#e7f0fe;color:#1877F2">Pataje</button>` : ''}
+      </div>
+      <button type="button" id="pr-close" style="width:100%;border:0;background:transparent;color:#65676b;font-weight:700;font-size:14px;padding:8px">Fèmen</button>
+    </div>`;
+  document.body.appendChild(ov);
+  const close = ()=>ov.remove();
+  ov.querySelector('#pr-close').onclick = close;
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  ov.querySelector('#pr-save').onclick = ()=>{ try{ pdfAnchorDownload(blob, fileName); }catch(e){ pdfOpenBlob(blob); } };
+  ov.querySelector('#pr-open').onclick = ()=>{ try{ pdfOpenBlob(blob); }catch(e){ printToast('Pa ka louvri PDF la sou aparèy sa a. Eseye «Pataje».'); } };
+  const sh = ov.querySelector('#pr-share');
+  if(sh) sh.onclick = async ()=>{ try{ await pdfShareBlob(blob, fileName, title); }catch(e){ if(!(e && e.name==='AbortError')) printToast('Pataje pa disponib.'); } };
+}
+async function downloadPrintPdf(filenameBase){
+  if(PRINT_STATE.busy) return;
+  PRINT_STATE.busy = true;
+  printBusy(true, 'Ap kreye PDF la...');
+  let blob;
+  try{
+    blob = await getPrintPdf(filenameBase);
+  }catch(e){
+    console.error('PDF echwe', e);
+    printBusy(false); PRINT_STATE.busy = false;
+    await showAlert('Pa t ka kreye PDF la ('+(e && e.message || 'erè')+'). Dokiman an pral telechaje kòm yon fichye HTML ou ka louvri epi enprime nan Chrome.');
+    downloadPrintAreaAsHtml(filenameBase);
+    return;
+  }
+  printBusy(false); PRINT_STATE.busy = false;
+  const fileName = printSafeName(filenameBase) + '.pdf';
+  try{ pdfAnchorDownload(blob, fileName); }catch(e){ console.error(e); }
+  showPdfReadyCard(blob, fileName, String(filenameBase||'Dokiman'));
+}
+async function sharePrintPdf(filenameBase){
+  if(PRINT_STATE.busy) return;
+  PRINT_STATE.busy = true;
+  printBusy(true, 'Ap kreye PDF la...');
+  let blob;
+  try{ blob = await getPrintPdf(filenameBase); }
+  catch(e){ printBusy(false); PRINT_STATE.busy = false; showAlert('Pa t ka kreye PDF la.'); return; }
+  printBusy(false); PRINT_STATE.busy = false;
+  const fileName = printSafeName(filenameBase) + '.pdf';
+  try{
+    if(await pdfShareBlob(blob, fileName, String(filenameBase||'Dokiman'))) return;
+  }catch(e){ if(e && e.name==='AbortError') return; }
+  showPdfReadyCard(blob, fileName, String(filenameBase||'Dokiman'));
+}
+/* ---- Dènye rekou : kopi HTML endepandan (si kreyasyon PDF la echwe) ---- */
 function downloadPrintAreaAsHtml(filenameBase){
   const content = document.getElementById('print-area').innerHTML;
   const styles = Array.from(document.querySelectorAll('style')).map(s=>s.textContent).join('\n');
@@ -5450,24 +5763,10 @@ function downloadPrintAreaAsHtml(filenameBase){
     const blob = new Blob([doc], {type:'text/html'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = String(filenameBase||'dokiman').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9-_ ]/g,'').trim().replace(/\s+/g,'-') + '.html';
+    a.href = url; a.download = printSafeName(filenameBase) + '.html';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }catch(e){ console.error('Telechajman kopi HTML echwe', e); }
-}
-/* ---- Chanje oryantasyon paj (A4) pou enprime yon dokiman lajè kòm Palmarès la,
-   san sa pa afekte lòt dokiman yo (li retounen an pòtrè otomatikman apre). ---- */
-function setPrintOrientation(mode){
-  let tag = document.getElementById('print-orientation-style');
-  if(!tag){
-    tag = document.createElement('style');
-    tag.id = 'print-orientation-style';
-    document.head.appendChild(tag);
-  }
-  tag.textContent = mode==='landscape' ? '@page{ size:A4 landscape; margin:10mm 12mm; }' : '';
-  const reset = ()=>{ tag.textContent=''; window.removeEventListener('afterprint', reset); };
-  window.addEventListener('afterprint', reset);
 }
 /* buildXxxHtml() retounen sèlman HTML final la (renderPrintFrame), san okenn
    efè segondè — sa pèmèt itilize menm rezilta a ni pou apèsi sou paj la
@@ -5499,8 +5798,7 @@ function buildPalmaresHtml(cls, term){
 }
 function printPalmares(cls, term){
   document.getElementById('print-area').innerHTML = buildPalmaresHtml(cls, term);
-  setPrintOrientation('landscape');
-  triggerPrint('Palmares-'+cls.name);
+  triggerPrint('Palmares-'+cls.name, 'landscape');
 }
 
 function buildBulletinHtml(cls, term, studentId){
