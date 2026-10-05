@@ -1072,7 +1072,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.14';
+const APP_VERSION = '2.26.10.15';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -5364,26 +5364,76 @@ function printSchedule(cls){
    moun nan ka louvri nan Chrome oswa nan yon aplikasyon enprime pou l
    enprime l kanmenm — enpresyon pa janm rete bloke nèt. ---- */
 function triggerPrint(filenameBase){
-  let ok = false;
-  try{
-    if(typeof window.print === 'function'){ window.print(); ok = true; }
-  }catch(e){ ok = false; }
-  if(!ok){
-    downloadPrintAreaAsHtml(filenameBase);
-    showAlert('Bouton enprime a pa disponib dirèkteman isit la — nou telechaje yon kopi HTML ou ka louvri nan Chrome oswa nan yon aplikasyon enprime pou l enprime l.');
-    return;
-  }
-  /* ---- Rezèv siplemantè : nan sèten WebView (APK), window.print() egziste
-     e li pa fè erè, men li pa reyèlman louvri okenn bwat dyalòg enpresyon
-     (anyen pa parèt). Nou pa ka detekte sa ak sètitid, kidonk nou ofri yon
-     dezyèm chemen ki toujou disponib: yon ti notifikasyon ak yon bouton pou
-     telechaje menm dokiman an kòm yon fichye HTML, pou moun nan ka enprime
-     l nan Chrome oswa nan yon lòt aplikasyon si bwat dyalòg la pa t parèt. ---- */
-  showToast({
-    title:'Si enpresyon an pa parèt...',
-    message:'Klike la a pou telechaje yon kopi HTML ou ka enprime.',
-    onClick:()=>downloadPrintAreaAsHtml(filenameBase)
-  });
+  /* Nan navigatè òdinè, window.print() fè evènman "beforeprint" LAD ANVAN
+     bwat dyalòg la louvri. Nan sèten WebView (APK) window.print() pa fè
+     anyen ditou: nou pa wè okenn "beforeprint". Nan ka sa a, nou pa
+     bloke itilizatè a — nou ba l yon ti ba anba (pa yon gwo notifikasyon
+     ki kouvri ekran an) ak yon bouton pou louvri dokiman an nan yon paj plen
+     kote li ka enprime, telechaje oswa pataje l. */
+  let fired = false;
+  const onBefore = ()=>{ fired = true; };
+  window.addEventListener('beforeprint', onBefore);
+  let threw = false;
+  try{ if(typeof window.print === 'function') window.print(); else threw = true; }
+  catch(e){ threw = true; }
+  setTimeout(()=>{
+    window.removeEventListener('beforeprint', onBefore);
+    if(threw || !fired) showPrintHelpBar(filenameBase);
+  }, threw ? 0 : 900);
+}
+function removePrintHelpBar(){ const b = document.getElementById('print-help-bar'); if(b) b.remove(); }
+function showPrintHelpBar(filenameBase){
+  removePrintHelpBar();
+  const bar = document.createElement('div');
+  bar.id = 'print-help-bar';
+  bar.className = 'no-print';
+  bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;background:#1c1e21;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px;line-height:1.35';
+  bar.innerHTML = '<div style="flex:1;min-width:0">Bwat enpresyon an pa louvri?</div>'
+    + '<button type="button" id="phb-open" style="background:#1877F2;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Louvri dokiman an</button>'
+    + '<button type="button" id="phb-close" aria-label="Fèmen" style="background:transparent;color:#bbb;border:0;font-size:22px;line-height:1;padding:0 4px">&times;</button>';
+  document.body.appendChild(bar);
+  document.getElementById('phb-close').onclick = removePrintHelpBar;
+  document.getElementById('phb-open').onclick = ()=>{ removePrintHelpBar(); openPrintViewer(filenameBase); };
+  setTimeout(removePrintHelpBar, 15000);
+}
+/* Paj plen: montre dokiman an (menm kontni #print-area) ak aksyon yo ki
+   toujou disponib: Enprime (re-eseye), Telechaje, Pataje. */
+function openPrintViewer(filenameBase){
+  const area = document.getElementById('print-area');
+  if(!area || !area.innerHTML.trim()){ showAlert('Pa gen dokiman pou montre.'); return; }
+  const old = document.getElementById('print-viewer'); if(old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'print-viewer';
+  ov.className = 'no-print';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:#e9ebee;display:flex;flex-direction:column';
+  const btn = 'border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px;';
+  ov.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#fff;border-bottom:1px solid #dcdfe3;flex-wrap:wrap">
+      <button type="button" id="pv-close" style="${btn}background:#e7f0fe;color:#1877F2">← Tounen</button>
+      <span style="flex:1"></span>
+      <button type="button" id="pv-print" style="${btn}background:#1877F2;color:#fff">Enprime</button>
+      <button type="button" id="pv-dl" style="${btn}background:#e7f0fe;color:#1877F2">Telechaje</button>
+      ${navigator.share ? `<button type="button" id="pv-share" style="${btn}background:#e7f0fe;color:#1877F2">Pataje</button>` : ''}
+    </div>
+    <div id="pv-scroll" style="flex:1;overflow:auto;padding:10px;-webkit-overflow-scrolling:touch">
+      <div id="pv-page" style="width:794px;max-width:none;margin:0 auto;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);padding:10px;box-sizing:border-box">${area.innerHTML}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  const page = ov.querySelector('#pv-page');
+  const fit = ()=>{ const z = Math.min(1, (window.innerWidth-20)/794); page.style.zoom = z; };
+  fit();
+  ov.querySelector('#pv-close').onclick = ()=>ov.remove();
+  ov.querySelector('#pv-print').onclick = ()=>{ try{ window.print(); }catch(e){ showAlert('Enprime a pa disponib sou aparèy sa a. Itilize «Telechaje» oswa «Pataje».'); } };
+  ov.querySelector('#pv-dl').onclick = ()=>downloadPrintAreaAsHtml(filenameBase);
+  const sh = ov.querySelector('#pv-share');
+  if(sh) sh.onclick = async ()=>{
+    try{
+      const styles = Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
+      const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(filenameBase||'Dokiman')}</title><style>${styles}\nbody{margin:0;background:#fff;} #print-area{display:block !important;}</style></head><body><div id="print-area">${area.innerHTML}</div></body></html>`;
+      const file = new File([doc], String(filenameBase||'dokiman').replace(/[^a-zA-Z0-9-_]/g,'-')+'.html', {type:'text/html'});
+      if(navigator.canShare && navigator.canShare({files:[file]})) await navigator.share({files:[file], title:String(filenameBase||'Dokiman')});
+      else await navigator.share({title:String(filenameBase||'Dokiman'), text:'Dokiman Meda'});
+    }catch(e){ if(!(e && e.name==='AbortError')) downloadPrintAreaAsHtml(filenameBase); }
+  };
 }
 /* ---- Pran tout <style> paj la (menm CSS ki itilize pou apèsi a) epi
    anfèmen kontni #print-area a nan yon fichye HTML endepandan, ak menm
