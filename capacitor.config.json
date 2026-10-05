@@ -3,6 +3,8 @@
   "appName": "Meda",
   "webDir": "www",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://medawilgens24-coder.github.io/MEDA/",
+    "cleartext": true
   }
 }
