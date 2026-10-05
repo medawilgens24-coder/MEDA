@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script>
+/* --- Android bridge (APK Capacitor) : enprime natif + sove fichye.
+   Kòd sa a andedan fichye a, kidonk li toujou la, kèlkeswa jan APK a bati.
+   Si bati APK a deja enjekte l, nou pa double-anbale l. --- */
+(function(){
+  if(window.__bridgeShimDone) return;
+  var pr = window.print;
+  if(pr && String(pr).indexOf('AndroidBridge') !== -1) { window.__bridgeShimDone = true; return; }
+  window.__bridgeShimDone = true;
+  var origPrint = pr ? pr.bind(window) : null;
+  window.print = function(){
+    if (window.AndroidBridge && window.AndroidBridge.print) { window.AndroidBridge.print(); }
+    else if (origPrint) { origPrint(); }
+  };
+  var origClick = HTMLAnchorElement.prototype.click;
+  if(String(origClick).indexOf('AndroidBridge') === -1){
+    HTMLAnchorElement.prototype.click = function(){
+      var a = this;
+      if (window.AndroidBridge && window.AndroidBridge.saveFile && a.download && a.href && a.href.indexOf('blob:') === 0) {
+        fetch(a.href).then(function(r){ return r.blob(); }).then(function(b){
+          var fr = new FileReader();
+          fr.onloadend = function(){
+            var data = String(fr.result).split(',')[1] || '';
+            window.AndroidBridge.saveFile(a.download, data, b.type || 'application/octet-stream');
+          };
+          fr.readAsDataURL(b);
+        });
+        return;
+      }
+      return origClick.apply(this, arguments);
+    };
+  }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -1072,7 +1106,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.17';
+const APP_VERSION = '2.26.10.18';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -5422,12 +5456,31 @@ function runWindowPrint(onResult){
    otomatikman. Sou navigatè òdinè (Chrome, PC) nou kenbe fenèt enprime a. */
 const IS_WEBVIEW = /;\s*wv\)|\bwv\b|median|gonative|webintoapp|appsgeyser|webview/i.test(navigator.userAgent||'')
   || !!(window.median || window.gonative || window.Android || window.AndroidInterface);
+function hasNativePrint(){ return !!(window.AndroidBridge && window.AndroidBridge.print); }
+function offerPdfToast(filenameBase){
+  showToast({
+    title:'Si fenèt enprime a pa parèt...',
+    message:'Klike la a pou telechaje yon PDF.',
+    duration:9000,
+    onClick:()=>downloadPrintPdf(filenameBase)
+  });
+}
+/* Lòd : 1) APK ak pon natif -> enpresyon natif dirèk (menm jan ak vèsyon ki te mache a)
+         2) lòt WebView -> PDF otomatik  3) navigatè òdinè -> window.print() */
+function doPrintNow(filenameBase){
+  if(hasNativePrint()){
+    try{ window.print(); }catch(e){ downloadPrintPdf(filenameBase); return; }
+    offerPdfToast(filenameBase);
+    return;
+  }
+  if(IS_WEBVIEW){ downloadPrintPdf(filenameBase); return; }
+  runWindowPrint((ok)=>{ if(!ok) downloadPrintPdf(filenameBase); });
+}
 function triggerPrint(filenameBase, orient){
   orient = orient==='landscape' ? 'landscape' : 'portrait';
   PRINT_STATE.doc = { name: filenameBase, orient };
   setPrintOrientation(orient);
-  if(IS_WEBVIEW){ downloadPrintPdf(filenameBase); return; }
-  runWindowPrint((ok)=>{ if(!ok) downloadPrintPdf(filenameBase); });
+  doPrintNow(filenameBase);
 }
 /* ---- Paj plen (apèsi) : Enprime / Telechaje PDF / Pataje ---- */
 function openPrintViewer(filenameBase){
@@ -5459,8 +5512,7 @@ function openPrintViewer(filenameBase){
   ov.querySelector('#pv-close').onclick = ()=>ov.remove();
   ov.querySelector('#pv-print').onclick = ()=>{
     setPrintOrientation(doc.orient);
-    if(IS_WEBVIEW){ downloadPrintPdf(doc.name || filenameBase); return; }
-    runWindowPrint((ok)=>{ if(!ok) downloadPrintPdf(doc.name || filenameBase); });
+    doPrintNow(doc.name || filenameBase);
   };
   ov.querySelector('#pv-dl').onclick = ()=>downloadPrintPdf(doc.name || filenameBase);
   const sh = ov.querySelector('#pv-share');
