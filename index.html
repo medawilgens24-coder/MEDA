@@ -1072,7 +1072,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.13';
+const APP_VERSION = '2.26.10.14';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1401,16 +1401,18 @@ function evoLineSvg(evo, scaleMax){
       <text x="${padL-5}" y="${(y+3).toFixed(1)}" font-size="9" fill="#9AA0A6" text-anchor="end">${tickTxt}</text>`;
   }).join('');
   const UP='#1E9E4A', DOWN='#E02F2F', FLAT='#1877F2';
-  const colorAt = i => { if(i===0) return FLAT; const d=(pts[i].avg||0)-(pts[i-1].avg||0); return d>0.0001?UP:(d<-0.0001?DOWN:FLAT); };
+  const colorAt = i => { if(i===0) return n>1 ? ((pts[1].avg||0)-(pts[0].avg||0)>0.0001?UP:((pts[1].avg||0)-(pts[0].avg||0)<-0.0001?DOWN:FLAT)) : FLAT; const d=(pts[i].avg||0)-(pts[i-1].avg||0); return d>0.0001?UP:(d<-0.0001?DOWN:FLAT); };
   const totalD = (pts[n-1].avg||0)-(pts[0].avg||0);
-  const areaColor = n<2 ? FLAT : (totalD>0.0001?UP:(totalD<-0.0001?DOWN:FLAT));
+  const baseY = (padT+plotH).toFixed(1);
+  const areas = pts.slice(1).map((p,i)=>`<path d="M${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)} L${p.x.toFixed(1)},${p.y.toFixed(1)} L${p.x.toFixed(1)},${baseY} L${pts[i].x.toFixed(1)},${baseY} Z" fill="${colorAt(i+1)}" fill-opacity=".13" stroke="none"/>`).join('');
+  const areaFlat = n<2 ? `<path d="${areaD}" fill="${FLAT}" fill-opacity=".12" stroke="none"/>` : '';
   const segs = pts.slice(1).map((p,i)=>`<line x1="${pts[i].x.toFixed(1)}" y1="${pts[i].y.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${colorAt(i+1)}" stroke-width="2.5" stroke-linecap="round"/>`).join('');
   const dots = pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${colorAt(i)}" stroke="#fff" stroke-width="2"/>`).join('');
   const valueLabels = pts.map((p,i)=>`<text x="${(p.x+dxFor(i)).toFixed(1)}" y="${(p.y-10).toFixed(1)}" font-size="10.5" font-weight="700" fill="${colorAt(i)}" text-anchor="${anchorFor(i)}">${escapeHtml(fmtAvg(p.avg))}${i>0?(colorAt(i)===UP?' ▲':(colorAt(i)===DOWN?' ▼':'')):''}</text>`).join('');
   const termLabels = pts.map((p,i)=>`<text x="${(p.x+dxFor(i)).toFixed(1)}" y="${h-8}" font-size="10" fill="#65676B" text-anchor="${anchorFor(i)}">${escapeHtml(p.term)}</text>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="190" preserveAspectRatio="xMidYMid meet">
     ${gridLines}
-    <path d="${areaD}" fill="${areaColor}" fill-opacity=".12" stroke="none"/>
+    ${areas}${areaFlat}
     ${n===1 ? '' : segs}
     ${dots}${valueLabels}${termLabels}
   </svg>`;
@@ -3306,7 +3308,7 @@ function adminHome(me){
     </div>
     ${stats.nbGraded===0 ? `<div class="empty-state">Okenn done disponib</div>` : `
     <div class="dash-avg-wrap">
-      <div class="dash-avg-gauge">${gaugeSvg(stats.globalAvg, DATA.avgScale===10?10:100)}<div class="gauge-label">${fmtAvg(stats.globalAvg)}</div></div>
+      <div class="dash-avg-gauge">${gaugeSvg(scaledAvg(stats.globalAvg), avgScale())}<div class="gauge-label">${fmtAvg(stats.globalAvg)}</div></div>
       <div><div class="dash-avg-big">${fmtAvg(stats.globalAvg)} ${avgScaleLabel()}</div>
       <div class="dash-avg-sub">Kalkile sou ${stats.nbGraded} elèv ki gen nòt antre pou trimès sa a.</div></div>
     </div>`}
