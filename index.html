@@ -1072,7 +1072,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.16';
+const APP_VERSION = '2.26.10.17';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -5418,34 +5418,17 @@ function runWindowPrint(onResult){
     onResult(!threw && fired, threw);
   }, threw ? 0 : 1300);
 }
+/* WebView (APK) : window.print() pa janm reponn la -> nou pa menm eseye. Nou kreye PDF la
+   otomatikman. Sou navigatè òdinè (Chrome, PC) nou kenbe fenèt enprime a. */
+const IS_WEBVIEW = /;\s*wv\)|\bwv\b|median|gonative|webintoapp|appsgeyser|webview/i.test(navigator.userAgent||'')
+  || !!(window.median || window.gonative || window.Android || window.AndroidInterface);
 function triggerPrint(filenameBase, orient){
   orient = orient==='landscape' ? 'landscape' : 'portrait';
   PRINT_STATE.doc = { name: filenameBase, orient };
-  setPrintOrientation(orient);   /* toujou reyajiste: pa gen oryantasyon ki rete bloke */
-  runWindowPrint((ok, threw)=>{
-    if(ok) return;
-    if(threw){ openPrintViewer(filenameBase); return; }
-    showPrintHelpBar(filenameBase);
-  });
+  setPrintOrientation(orient);
+  if(IS_WEBVIEW){ downloadPrintPdf(filenameBase); return; }
+  runWindowPrint((ok)=>{ if(!ok) downloadPrintPdf(filenameBase); });
 }
-function removePrintHelpBar(){ const b = document.getElementById('print-help-bar'); if(b) b.remove(); }
-function showPrintHelpBar(filenameBase){
-  removePrintHelpBar();
-  const bar = document.createElement('div');
-  bar.id = 'print-help-bar';
-  bar.className = 'no-print';
-  bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;background:#1c1e21;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13.5px;line-height:1.35';
-  bar.innerHTML = '<div style="flex:1;min-width:0">Fenèt enprime a pa louvri?</div>'
-    + '<button type="button" id="phb-pdf" style="background:#1877F2;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Telechaje PDF</button>'
-    + '<button type="button" id="phb-open" style="background:#3a3d42;color:#fff;border:0;border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px">Louvri</button>'
-    + '<button type="button" id="phb-close" aria-label="Fèmen" style="background:transparent;color:#bbb;border:0;font-size:22px;line-height:1;padding:0 4px">&times;</button>';
-  document.body.appendChild(bar);
-  document.getElementById('phb-close').onclick = removePrintHelpBar;
-  document.getElementById('phb-pdf').onclick = ()=>{ removePrintHelpBar(); downloadPrintPdf(filenameBase); };
-  document.getElementById('phb-open').onclick = ()=>{ removePrintHelpBar(); openPrintViewer(filenameBase); };
-  setTimeout(removePrintHelpBar, 20000);
-}
-
 /* ---- Paj plen (apèsi) : Enprime / Telechaje PDF / Pataje ---- */
 function openPrintViewer(filenameBase){
   const area = document.getElementById('print-area');
@@ -5476,7 +5459,8 @@ function openPrintViewer(filenameBase){
   ov.querySelector('#pv-close').onclick = ()=>ov.remove();
   ov.querySelector('#pv-print').onclick = ()=>{
     setPrintOrientation(doc.orient);
-    runWindowPrint((ok)=>{ if(!ok) printToast('Enprime a pa reponn sou aparèy sa a. Peze «Telechaje» pou jwenn PDF la, epi enprime l ak aplikasyon PDF ou.', 6500); });
+    if(IS_WEBVIEW){ downloadPrintPdf(doc.name || filenameBase); return; }
+    runWindowPrint((ok)=>{ if(!ok) downloadPrintPdf(doc.name || filenameBase); });
   };
   ov.querySelector('#pv-dl').onclick = ()=>downloadPrintPdf(doc.name || filenameBase);
   const sh = ov.querySelector('#pv-share');
@@ -5701,10 +5685,10 @@ function showPdfReadyCard(blob, fileName, title){
   const canShare = !!(navigator.canShare && typeof File==='function');
   ov.innerHTML = `<div style="width:100%;max-width:460px;background:#fff;border-radius:18px;padding:18px 16px 14px;box-shadow:0 10px 36px rgba(0,0,0,.35)">
       <div style="font-size:16px;font-weight:800;color:#1c1e21;margin-bottom:4px">PDF a pare ✓</div>
-      <div style="font-size:13px;color:#65676b;margin-bottom:14px;word-break:break-all">${escapeHtml(fileName)} · ${kb} Ko<br>Si telechajman an pa t kòmanse poukont li, itilize bouton yo anba a.</div>
+      <div style="font-size:13px;color:#65676b;margin-bottom:14px;word-break:break-all">${escapeHtml(fileName)} · ${kb} Ko<br>PDF la sove nan dosye <b>Telechajman</b> telefòn ou. Louvri l ak aplikasyon PDF ou pou enprime l. Si l pa sove, peze «Sove».</div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <button type="button" id="pr-save" style="${btn}background:#1877F2;color:#fff">Sove</button>
-        <button type="button" id="pr-open" style="${btn}background:#e7f0fe;color:#1877F2">Louvri</button>
+        <button type="button" id="pr-open" style="${btn}background:#e7f0fe;color:#1877F2">Wè</button>
         ${canShare ? `<button type="button" id="pr-share" style="${btn}background:#e7f0fe;color:#1877F2">Pataje</button>` : ''}
       </div>
       <button type="button" id="pr-close" style="width:100%;border:0;background:transparent;color:#65676b;font-weight:700;font-size:14px;padding:8px">Fèmen</button>
@@ -5714,7 +5698,7 @@ function showPdfReadyCard(blob, fileName, title){
   ov.querySelector('#pr-close').onclick = close;
   ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
   ov.querySelector('#pr-save').onclick = ()=>{ try{ pdfAnchorDownload(blob, fileName); }catch(e){ pdfOpenBlob(blob); } };
-  ov.querySelector('#pr-open').onclick = ()=>{ try{ pdfOpenBlob(blob); }catch(e){ printToast('Pa ka louvri PDF la sou aparèy sa a. Eseye «Pataje».'); } };
+  ov.querySelector('#pr-open').onclick = ()=>{ close(); openPrintViewer(title); };
   const sh = ov.querySelector('#pr-share');
   if(sh) sh.onclick = async ()=>{ try{ await pdfShareBlob(blob, fileName, title); }catch(e){ if(!(e && e.name==='AbortError')) printToast('Pataje pa disponib.'); } };
 }
