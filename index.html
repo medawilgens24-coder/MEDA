@@ -130,12 +130,13 @@
   .msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
   .msg-bubble.theirs{align-self:flex-start;background:#F0F2F5;color:var(--text);border-bottom-left-radius:4px;}
   .msg-bubble .meta{display:flex;align-items:center;gap:4px;font-size:10.5px;opacity:.75;margin-top:4px;}
-  .msg-ticks{display:inline-flex;align-items:flex-end;gap:2px;flex-shrink:0;}
-  .msg-ticks .tkb{width:3px;border-radius:2px;background:rgba(255,255,255,.8);}
-  .msg-ticks .tkb:nth-child(1){height:7px;}
-  .msg-ticks .tkb:nth-child(2){height:10px;}
-  .msg-ticks.delivered .tkb{background:#FF5A5F;}
-  .msg-ticks.read .tkb{background:#8ED1FF;}
+  .msg-ticks{display:inline-flex;align-items:center;flex-shrink:0;margin-left:2px;color:rgba(255,255,255,.7);line-height:0;}
+  .msg-ticks svg{display:block;width:20px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .msg-ticks.pending svg{width:12px;height:12px;stroke-width:1.6;opacity:.85;}
+  .msg-ticks.delivered{color:#fff;}
+  .msg-ticks.read{color:#7CFFB2;}
+  .msg-ticks.failed{color:#FFC9C9;}
+  .msg-ticks.failed svg{width:13px;height:13px;stroke-width:1.7;}
   .msg-photo{display:block;max-width:240px;max-height:260px;width:100%;border-radius:11px;margin-bottom:6px;cursor:zoom-in;object-fit:cover;}
   .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
   .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
@@ -151,9 +152,10 @@
   .msg-bulk-bar button{border-radius:50px;}
   .msg-bubble.photo-only{padding:5px;background:transparent;box-shadow:none;}
   .msg-bubble.photo-only.mine .meta{color:var(--text);opacity:.65;padding:0 4px;}
-  .msg-bubble.photo-only.mine .msg-ticks .tkb{background:var(--text-soft);}
-  .msg-bubble.photo-only.mine .msg-ticks.delivered .tkb{background:#E0393F;}
-  .msg-bubble.photo-only.mine .msg-ticks.read .tkb{background:#1877F2;}
+  .msg-bubble.photo-only.mine .msg-ticks{color:var(--text-soft);}
+  .msg-bubble.photo-only.mine .msg-ticks.delivered{color:#4B4F56;}
+  .msg-bubble.photo-only.mine .msg-ticks.read{color:#1877F2;}
+  .msg-bubble.photo-only.mine .msg-ticks.failed{color:#E0393F;}
   .msg-compose{display:flex;gap:8px;align-items:flex-end;background:var(--card,#fff);border:1px solid var(--line);border-radius:22px;padding:7px 7px 7px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:border-color .15s ease,box-shadow .15s ease;}
   .msg-compose:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,119,242,.12);}
   .msg-compose textarea{flex:1;resize:none;min-height:38px;max-height:120px;padding:8px 0;border:none;outline:none;background:transparent;font-size:14px;font-family:inherit;color:var(--text);}
@@ -1106,7 +1108,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.18';
+const APP_VERSION = '2.26.10.19';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1685,14 +1687,26 @@ function renderMsgBubble(m, role, teacher){
     <div class="msg-bubble ${mine?'mine':'theirs'}${photoOnly?' photo-only':''}" data-msg-id="${m.id}">${photoHtml}${escapeHtml(m.text)}<span class="meta">${label} · ${fmtTimeOnly(m.ts)}${editedTag}${ticksHtml}</span></div>
   </div>`;
 }
-/* Ba estati mesaj la: 1 ba = voye, 2 ba wouj = lòt moun nan reyèlman anliy
-   kounye a (men poko li mesaj la), 2 ba ble = li. "recipientOnline" verifye
-   prezans reyèl moun nan (pa jis si sovgad la te reyisi), pou ba wouj la pa
-   parèt si moun nan pa konekte. Parèt sèlman sou mesaj PA MWEN YO. */
+/* Endikatè estati mesaj (stil mesajri modèn) — sou mesaj PA MWEN YO sèlman :
+   ⏱  ap voye (poko rive sou sèvè a)
+   ✓   voye (sou sèvè a)
+   ✓✓ gri/blan : LIVRE — aparèy lòt moun nan resevwa mesaj la
+   ✓✓ vèt/ble : LI
+   ⚠  pa t voye — app la ap eseye ankò otomatikman.
+   "recipientOnline" sèvi sèlman pou ansyen mesaj (anvan sistèm resepsyon an). */
+const TICK_SVG = {
+  pending:'<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.7"/><path d="M6 3.3V6l1.9 1.2"/></svg>',
+  one:'<svg viewBox="0 0 20 12"><path d="M5 6.6l3.1 3.1 6.4-6.6"/></svg>',
+  two:'<svg viewBox="0 0 20 12"><path d="M1.8 6.6l3.1 3.1 6.2-6.4"/><path d="M8.4 6.6l3.1 3.1 6.4-6.6"/></svg>',
+  failed:'<svg viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="5.3"/><path d="M6.5 3.6v3.6M6.5 9.3v.1"/></svg>'
+};
 function msgStatusTicksHtml(m, recipientOnline){
-  if(m.read) return `<span class="msg-ticks read" title="Li"><span class="tkb"></span><span class="tkb"></span></span>`;
-  if(m.delivered && recipientOnline) return `<span class="msg-ticks delivered" title="Moun nan anliy — poko li"><span class="tkb"></span><span class="tkb"></span></span>`;
-  return `<span class="msg-ticks sent" title="Voye"><span class="tkb"></span></span>`;
+  const mk = (cls, svg, title)=>`<span class="msg-ticks ${cls}" title="${title}" aria-label="${title}">${svg}</span>`;
+  if(m.read) return mk('read', TICK_SVG.two, 'Li');
+  if(MSG_FAILED.has(m.id)) return mk('failed', TICK_SVG.failed, 'Pa t voye — ap eseye ankò');
+  if(MSG_PENDING.has(m.id)) return mk('pending', TICK_SVG.pending, 'Ap voye…');
+  if(m.received || (m.delivered && recipientOnline)) return mk('delivered', TICK_SVG.two, 'Livre — poko li');
+  return mk('sent', TICK_SVG.one, 'Voye');
 }
 /* Bouton pou antre/soti nan mòd "seleksyone pa gwoup" pou siprime plizyè mesaj */
 function msgSelectToggleHtml(){
@@ -1797,7 +1811,7 @@ function wireMessageThread(teacherId, role, rerender){
     });
     ui.msgSelectMode = false;
     ui.msgSelectedIds = [];
-    await saveData();
+    await saveMessages();
     rerender();
   }));
   document.querySelectorAll('[data-msg-action-close]').forEach(el=>el.addEventListener('click', (e)=>{
@@ -1822,14 +1836,14 @@ function wireMessageThread(teacherId, role, rerender){
     if(!canEditMsg(m, role)){ await showAlert('Delè modifikasyon an (15 minit) pase.'); ui.msgEditId=null; rerender(); return; }
     m.text = text; m.editedAt = Date.now();
     ui.msgEditId = null;
-    await saveData(); rerender();
+    await saveMessages(); rerender();
   }));
   document.querySelectorAll('[data-msg-delete-me]').forEach(el=>el.addEventListener('click', async ()=>{
     const id = el.dataset.msgDeleteMe;
     const m = ensureMessages().find(x=>x.id===id);
     if(m){ if(!Array.isArray(m.deletedFor)) m.deletedFor=[]; if(!m.deletedFor.includes(role)) m.deletedFor.push(role); }
     ui.msgActionFor = null;
-    await saveData(); rerender();
+    await saveMessages(); rerender();
   }));
   document.querySelectorAll('[data-msg-delete-all]').forEach(el=>el.addEventListener('click', async ()=>{
     const id = el.dataset.msgDeleteAll;
@@ -1839,7 +1853,7 @@ function wireMessageThread(teacherId, role, rerender){
       m.deletedForEveryone = true; m.deletedAt = Date.now(); m.text='';
     }
     ui.msgActionFor = null;
-    await saveData(); rerender();
+    await saveMessages(); rerender();
   }));
 }
 /* Etikèt pwofesè pou afiche sou yon klas — soti nan pwofil inik la, pa nan klas la */
@@ -2225,7 +2239,12 @@ async function saveData(){
   const dot = document.getElementById('conn-status');
   try{
     if(FIREBASE_ENABLED && fbDb){
-      await fbDb.ref(schoolDataRefPath()).set(DATA);
+      /* Mesaj yo pa ekri ak rès done yo (yo gen pwòp tranzaksyon) — konsa yon
+         sovgad nòt/klas pa ka efase mesaj ki fenk rive. */
+      const rest = Object.assign({}, DATA); delete rest.messages;
+      const jobs = [fbDb.ref(schoolDataRefPath()).update(rest)];
+      if(Array.isArray(DATA.messages)) jobs.push(saveMessages());
+      await Promise.all(jobs);
     } else {
       await window.storage.set(schoolStorageKey(), JSON.stringify(DATA), true);
     }
@@ -2309,6 +2328,7 @@ function playNotifSound(){
    sinon sondaj peryodik (chak 9s) sou sistèm depo pa defo a ---- */
 let _msgPollHandle = null;
 let _fbMsgHandler = null;
+let _fbMsgRef = null;
 let _notifRole = null;
 function startMessageNotifications(role){
   if(_notifRole===role && (_msgPollHandle || _fbMsgHandler)) return;
@@ -2316,35 +2336,154 @@ function startMessageNotifications(role){
   _notifRole = role;
   if(FIREBASE_ENABLED && fbDb){
     _fbMsgHandler = snap=>{
-      if(document.hidden || !snap.exists()) return;
-      diffAndNotifyMessages(snap.val(), role);
+      const msgs = msgNormalize(snap.val());
+      markReceivedRemote(msgs, role);       /* ✓✓ : aparèy sa a resevwa mesaj yo */
+      if(document.hidden) return;
+      diffAndNotifyMessages({messages: msgs}, role);
     };
-    fbDb.ref(schoolDataRefPath()).on('value', _fbMsgHandler);
+    _fbMsgRef = msgRef();
+    _fbMsgRef.on('value', _fbMsgHandler);
   } else {
     _msgPollHandle = setInterval(()=>checkForNewMessages(role), 9000);
   }
 }
 function stopMessageNotifications(){
   if(_msgPollHandle){ clearInterval(_msgPollHandle); _msgPollHandle=null; }
-  if(_fbMsgHandler && fbDb){ fbDb.ref(schoolDataRefPath()).off('value', _fbMsgHandler); _fbMsgHandler=null; }
+  if(_fbMsgHandler && _fbMsgRef){ try{ _fbMsgRef.off('value', _fbMsgHandler); }catch(e){} _fbMsgHandler=null; _fbMsgRef=null; }
   _notifRole = null;
 }
 document.addEventListener('visibilitychange', ()=>{
   if(!document.hidden && _notifRole) checkForNewMessages(_notifRole);
 });
 
+
+/* ===================== MESAJ RAPID (sinkwonizasyon pa mesaj) =====================
+   Anvan : chak mesaj voye/li re-ekri TOUT done lekòl la (klas, nòt, elèv, foto...)
+   epi chak chanjman te fè TOUT moun telechaje tout bagay → mesaj yo te lant, epi
+   yon sovgad ak done ansyen te kapab efase mesaj ki fenk rive.
+   Kounye a : mesaj yo gen pwòp chemen ("<lekòl>/messages"), yo ekri ak yon tranzaksyon
+   ki FIN ak sa ki deja sou sèvè a (pa janm ekraze mesaj lòt moun), epi se sèlman
+   mesaj yo ki transfere. Resepsyon (✓✓) make otomatikman pa aparèy destinatè a. */
+const MSG_PENDING = new Set();   /* mesaj ki poko konfime sou sèvè a */
+const MSG_FAILED  = new Set();   /* mesaj ki pa t voye (retire lè yo pase) */
+let _msgKnownIds = new Set();    /* id mesaj dènye sinkwonizasyon an te konnen */
+function msgNormalize(v){
+  if(!v) return [];
+  return (Array.isArray(v) ? v : Object.values(v)).filter(m=>m && m.id);
+}
+function msgSig(m){
+  return m.id+'|'+(m.read?1:0)+(m.received?1:0)+(m.delivered?1:0)+(m.deletedForEveryone?1:0)+'|'+(m.editedAt||0)+'|'+((m.deletedFor||[]).length);
+}
+function msgListSig(list){ return list.map(msgSig).join(';'); }
+function msgMergeOne(r, l){
+  /* r = vèsyon sèvè, l = vèsyon lokal. Drapo yo se "yon fwa vre, toujou vre". */
+  const out = ((l.editedAt||0) >= (r.editedAt||0)) ? Object.assign({}, r, l) : Object.assign({}, l, r);
+  out.read = !!(r.read || l.read);
+  out.received = !!(r.received || l.received);
+  out.delivered = !!(r.delivered || l.delivered);
+  if(r.receivedAt || l.receivedAt) out.receivedAt = r.receivedAt || l.receivedAt;
+  if(r.deletedForEveryone || l.deletedForEveryone){
+    out.deletedForEveryone = true;
+    out.deletedAt = r.deletedAt || l.deletedAt || Date.now();
+    out.text = ''; out.photo = null;
+  } else { out.deletedForEveryone = false; }
+  const df = new Set([].concat(r.deletedFor||[], l.deletedFor||[]));
+  out.deletedFor = Array.from(df);
+  return out;
+}
+function mergeMessageLists(remote, local, removedIds){
+  const map = new Map();
+  remote.forEach(m=>{ if(!removedIds.has(m.id)) map.set(m.id, m); });
+  local.forEach(m=>{
+    if(removedIds.has(m.id)) return;
+    map.set(m.id, map.has(m.id) ? msgMergeOne(map.get(m.id), m) : m);
+  });
+  return Array.from(map.values()).sort((a,b)=>(a.ts||0)-(b.ts||0));
+}
+function msgFirebaseOn(){ return !!(FIREBASE_ENABLED && fbDb); }
+function msgRef(){ return fbDb.ref(schoolDataRefPath()+'/messages'); }
+/* Sovgade mesaj yo sèlman. Retounen true si sa reyisi. */
+async function saveMessages(){
+  if(!msgFirebaseOn()){ await saveData(); return true; }
+  const local = ensureMessages().filter(m=>m && m.id);
+  const localIds = new Set(local.map(m=>m.id));
+  const removed = new Set(Array.from(_msgKnownIds).filter(id=>!localIds.has(id)));
+  const mine = local.filter(m=>MSG_PENDING.has(m.id) || MSG_FAILED.has(m.id)).map(m=>m.id);
+  try{
+    const res = await withTimeout(
+      msgRef().transaction(cur=>mergeMessageLists(msgNormalize(cur), local, removed)),
+      25000);
+    const merged = msgNormalize(res && res.snapshot ? res.snapshot.val() : null);
+    if(merged.length || local.length===0){
+      const pendingLeft = ensureMessages().filter(m=>(MSG_PENDING.has(m.id)||MSG_FAILED.has(m.id)) && !mine.includes(m.id));
+      DATA.messages = merged.concat(pendingLeft.filter(m=>!merged.some(x=>x.id===m.id)));
+    }
+    _msgKnownIds = new Set(merged.map(m=>m.id));
+    mine.forEach(id=>{ MSG_PENDING.delete(id); MSG_FAILED.delete(id); });
+    const dot = document.getElementById('conn-status');
+    if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); }
+    return true;
+  }catch(e){
+    console.error('Erè sovgad mesaj', e);
+    mine.forEach(id=>{ MSG_PENDING.delete(id); MSG_FAILED.add(id); });
+    return false;
+  }
+}
+/* Modifye mesaj sou sèvè dirèkteman (ex: make "resevwa") san touche lòt bagay. */
+async function mutateMessagesRemote(fn){
+  if(!msgFirebaseOn()) return false;
+  try{
+    await withTimeout(msgRef().transaction(cur=>{
+      const arr = msgNormalize(cur);
+      if(!arr.length) return cur;           /* pa gen anyen pou chanje */
+      fn(arr);
+      return arr;
+    }), 20000);
+    return true;
+  }catch(e){ return false; }
+}
+let _recvInFlight = false;
+function markReceivedRemote(msgs, role){
+  if(_recvInFlight || !msgFirebaseOn()) return;
+  const other = role==='admin' ? 'teacher' : 'admin';
+  const mineFor = m => m.sender===other && (role==='admin' || (session && m.teacherId===session.teacherId));
+  const need = msgs.filter(m=>mineFor(m) && !m.received).map(m=>m.id);
+  if(!need.length) return;
+  _recvInFlight = true;
+  const ids = new Set(need), now = Date.now();
+  mutateMessagesRemote(arr=>{ arr.forEach(m=>{ if(ids.has(m.id) && !m.received){ m.received = true; m.receivedAt = now; } }); })
+    .finally(()=>{ _recvInFlight = false; });
+}
+/* Re-eseye mesaj ki pa t pase (koupe rezo, elatriye) */
+let _msgRetryBusy = false;
+async function retryFailedMessages(){
+  if(_msgRetryBusy || !MSG_FAILED.size || !navigator.onLine) return;
+  _msgRetryBusy = true;
+  try{
+    const ids = Array.from(MSG_FAILED);
+    ids.forEach(id=>{ MSG_FAILED.delete(id); MSG_PENDING.add(id); });
+    const ok = await saveMessages();
+    if(!ok) ids.forEach(id=>{ MSG_PENDING.delete(id); MSG_FAILED.add(id); });
+    if(_notifRole) refreshMessagingUI(_notifRole);
+  } finally { _msgRetryBusy = false; }
+}
+setInterval(retryFailedMessages, 8000);
+window.addEventListener('online', retryFailedMessages);
+
 /* Konpare done fre yo (ki soti swa nan Firebase, swa nan ansyen depo a) ak
    sa n gen lokalman, epi deklannche notifikasyon pou nouvo mesaj yo. */
 function diffAndNotifyMessages(fresh, role){
   if(!DATA) return;
-  const freshMsgs = Array.isArray(fresh.messages) ? fresh.messages : [];
+  const freshMsgs = msgNormalize(fresh.messages);
   const localMsgs = ensureMessages();
-  if(freshMsgs.length===localMsgs.length && JSON.stringify(freshMsgs)===JSON.stringify(localMsgs)) return;
+  const keepLocal = localMsgs.filter(m=>(MSG_PENDING.has(m.id)||MSG_FAILED.has(m.id)) && !freshMsgs.some(x=>x.id===m.id));
+  _msgKnownIds = new Set(freshMsgs.map(m=>m.id));
+  if(freshMsgs.length===localMsgs.length - keepLocal.length && msgListSig(freshMsgs)===msgListSig(localMsgs.filter(m=>!keepLocal.includes(m)))) return;
   const knownIds = new Set(localMsgs.map(m=>m.id));
   const otherSender = role==='admin' ? 'teacher' : 'admin';
   const relevantNew = freshMsgs.filter(m=> !knownIds.has(m.id) && m.sender===otherSender &&
     (role==='admin' || m.teacherId===session.teacherId));
-  DATA.messages = freshMsgs;
+  DATA.messages = keepLocal.length ? freshMsgs.concat(keepLocal) : freshMsgs;
   relevantNew.forEach(m=>notifyNewMessage(m, role));
   refreshMessagingUI(role);
 }
@@ -2353,9 +2492,10 @@ async function checkForNewMessages(role){
   if(!DATA || document.hidden) return;
   try{
     if(FIREBASE_ENABLED && fbDb){
-      const snap = await fbDb.ref(schoolDataRefPath()).get();
-      if(!snap.exists()) return;
-      diffAndNotifyMessages(snap.val(), role);
+      const snap = await msgRef().get();
+      const msgs = msgNormalize(snap.val());
+      markReceivedRemote(msgs, role);
+      diffAndNotifyMessages({messages: msgs}, role);
     } else {
       const r = await window.storage.get(schoolStorageKey(), true);
       if(!r) return;
@@ -2401,7 +2541,7 @@ function refreshMessagingUI(role){
   if(onAdminThread || onTeacherThread){
     const tId = role==='admin' ? ui.msgTeacherId : session.teacherId;
     const justRead = ensureMessages().filter(m=>m.teacherId===tId && m.sender!==role && !m.read);
-    if(justRead.length){ justRead.forEach(m=>m.read=true); saveData(); }
+    if(justRead.length){ justRead.forEach(m=>m.read=true); saveMessages(); }
     role==='admin' ? render('admin') : render('teacher');
   } else if(role==='admin' && ui.adminView==='mesaj'){
     render('admin');
@@ -7453,7 +7593,7 @@ function wireEvents(view){
       });
       if(ui.msgTeacherId && !ui.msgShowProfile){
         const unreadMsgs = ensureMessages().filter(m=>m.teacherId===ui.msgTeacherId && m.sender==='teacher' && !m.read);
-        if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveData(); }
+        if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveMessages(); }
       }
       const photoInput = document.getElementById('msg-compose-photo-input');
       if(photoInput) photoInput.addEventListener('change', async ()=>{
@@ -7473,6 +7613,7 @@ function wireEvents(view){
         if(!text && !photo) return;
         const msg = {id:uid(), teacherId:ui.msgTeacherId, sender:'admin', senderUsername:currentAdmin().username, text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
         ensureMessages().push(msg);
+        MSG_PENDING.add(msg.id);
         ui.msgComposePhoto = null;
         render('admin');
         /* Mete delivered=true AVAN sèl sovgad la (pa de sovgad apa) — konsa
@@ -7480,7 +7621,7 @@ function wireEvents(view){
            separe, sovgad "li" lòt moun nan te ka ekraze sovgad "livre" sa a
            (oswa vis-vèrsa), e sa te fè ba wouj la pa janm parèt alafwa. */
         msg.delivered = true;
-        await saveData();
+        await saveMessages();
         render('admin');
       });
       const bub = document.getElementById('msg-bubbles');
@@ -7795,7 +7936,7 @@ function wireEvents(view){
     if(ui.teacherView==='klas') wireClassManager(findClass(session.classId), 'teacher');
     if(ui.teacherView==='mesaj'){
       const unreadMsgs = ensureMessages().filter(m=>m.teacherId===teacher.id && m.sender==='admin' && !m.read);
-      if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveData(); }
+      if(unreadMsgs.length){ unreadMsgs.forEach(m=>m.read=true); saveMessages(); }
       const photoInput = document.getElementById('msg-compose-photo-input');
       if(photoInput) photoInput.addEventListener('change', async ()=>{
         const file = photoInput.files && photoInput.files[0];
@@ -7814,10 +7955,11 @@ function wireEvents(view){
         if(!text && !photo) return;
         const msg = {id:uid(), teacherId:teacher.id, sender:'teacher', text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
         ensureMessages().push(msg);
+        MSG_PENDING.add(msg.id);
         ui.msgComposePhoto = null;
         render('teacher');
         msg.delivered = true;
-        await saveData();
+        await saveMessages();
         render('teacher');
       });
       const bub = document.getElementById('msg-bubbles');
