@@ -137,6 +137,14 @@
   .msg-ticks.read{color:#7CFFB2;}
   .msg-ticks.failed{color:#FFC9C9;}
   .msg-ticks.failed svg{width:13px;height:13px;stroke-width:1.7;}
+  .typing-row{animation:msgRowIn .18s ease both;}
+  .typing-row .msg-bubble{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+  .typing-dots{display:inline-flex;align-items:center;gap:4px;height:14px;}
+  .typing-dots i{display:block;width:6px;height:6px;border-radius:50%;background:#7d828a;animation:typingBounce 1.15s infinite ease-in-out;}
+  .typing-dots i:nth-child(2){animation-delay:.16s;}
+  .typing-dots i:nth-child(3){animation-delay:.32s;}
+  .typing-label{font-size:12px;color:var(--text-soft);font-style:italic;}
+  @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.45;}30%{transform:translateY(-4px);opacity:1;}}
   .msg-photo{display:block;max-width:240px;max-height:260px;width:100%;border-radius:11px;margin-bottom:6px;cursor:zoom-in;object-fit:cover;}
   .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
   .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
@@ -1108,7 +1116,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.19';
+const APP_VERSION = '2.26.10.21';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1761,6 +1769,8 @@ function renderMsgActionSheet(teacherId, role, teacher){
 /* Branche tout evenman popup/aksyon/edit pou yon konvèsasyon (itilize pou admin ak pwofesè) */
 function wireMessageThread(teacherId, role, rerender){
   wirePresenceForThread(teacherId, role, rerender);
+  wireTypingForThread(teacherId, role);
+  wireTypingInput(teacherId, role);
   document.querySelectorAll('[data-msg-photo-view]').forEach(img=>img.addEventListener('click', (e)=>{
     e.stopPropagation();
     const overlay = document.createElement('div');
@@ -2241,7 +2251,7 @@ async function saveData(){
     if(FIREBASE_ENABLED && fbDb){
       /* Mesaj yo pa ekri ak rès done yo (yo gen pwòp tranzaksyon) — konsa yon
          sovgad nòt/klas pa ka efase mesaj ki fenk rive. */
-      const rest = Object.assign({}, DATA); delete rest.messages;
+      const rest = Object.assign({}, DATA); delete rest.messages; delete rest.typing; delete rest.pushQueue; delete rest.pushTokens;
       const jobs = [fbDb.ref(schoolDataRefPath()).update(rest)];
       if(Array.isArray(DATA.messages)) jobs.push(saveMessages());
       await Promise.all(jobs);
@@ -2464,11 +2474,168 @@ async function retryFailedMessages(){
     ids.forEach(id=>{ MSG_FAILED.delete(id); MSG_PENDING.add(id); });
     const ok = await saveMessages();
     if(!ok) ids.forEach(id=>{ MSG_PENDING.delete(id); MSG_FAILED.add(id); });
+    else ids.forEach(id=>{ const m = ensureMessages().find(x=>x.id===id); if(m) enqueuePush(m); });
     if(_notifRole) refreshMessagingUI(_notifRole);
   } finally { _msgRetryBusy = false; }
 }
 setInterval(retryFailedMessages, 8000);
 window.addEventListener('online', retryFailedMessages);
+
+
+/* ===================== "AP EKRI…" (endikatè tape) =====================
+   Chak moun ekri yon ti timestamp tanporè nan <lekòl>/typing/<pwofesè>/<wòl> pandan l
+   ap tape (rafrechi chak ~2.5s, efase apre 4s san tape, oswa lè li voye / dekonekte).
+   Lòt moun nan konvèsasyon an wè twa pwen k ap bondi. Pa anrejistre nan done lekòl la. */
+const TYPING = { active:false, expireTimer:null, key:null, ref:null, handler:null,
+                 myRef:null, myKey:null, stopTimer:null, lastPing:0 };
+function typingMyRef(teacherId, role){
+  return fbDb.ref(schoolDataRefPath()+'/typing/'+teacherId+'/'+role);
+}
+function typingPing(teacherId, role){
+  if(!msgFirebaseOn()) return;
+  const now = Date.now();
+  clearTimeout(TYPING.stopTimer);
+  TYPING.stopTimer = setTimeout(()=>typingStop(), 4000);
+  if(now - TYPING.lastPing < 2500) return;
+  TYPING.lastPing = now;
+  try{
+    const key = teacherId+'/'+role;
+    if(!TYPING.myRef || TYPING.myKey!==key){
+      typingStop();
+      TYPING.myRef = typingMyRef(teacherId, role); TYPING.myKey = key;
+      TYPING.myRef.onDisconnect().remove();
+      TYPING.stopTimer = setTimeout(()=>typingStop(), 4000);
+    }
+    TYPING.myRef.set({ ts: nowServer() });
+  }catch(e){}
+}
+function typingStop(){
+  clearTimeout(TYPING.stopTimer); TYPING.stopTimer = null; TYPING.lastPing = 0;
+  if(TYPING.myRef){ try{ TYPING.myRef.remove(); }catch(e){} }
+}
+function applyTypingIndicator(){
+  const box = document.getElementById('msg-bubbles');
+  const old = document.getElementById('typing-ind');
+  if(!box){ if(old) old.remove(); return; }
+  if(!TYPING.active){ if(old) old.remove(); return; }
+  if(old) return;
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const row = document.createElement('div');
+  row.id = 'typing-ind';
+  row.className = 'msg-row typing-row';
+  row.innerHTML = '<div class="msg-bubble theirs" aria-live="polite"><span class="typing-dots"><i></i><i></i><i></i></span><span class="typing-label">ap ekri…</span></div>';
+  box.appendChild(row);
+  if(nearBottom) box.scrollTop = box.scrollHeight;
+}
+function wireTypingForThread(teacherId, role){
+  /* Deja branche sou menm konvèsasyon an → sèlman remete endikatè a nan DOM nouvo a */
+  const key = teacherId+'/'+role;
+  if(TYPING.key===key && TYPING.ref){ applyTypingIndicator(); return; }
+  if(TYPING.ref && TYPING.handler){ try{ TYPING.ref.off('value', TYPING.handler); }catch(e){} }
+  TYPING.key = key; TYPING.ref = null; TYPING.handler = null; TYPING.active = false;
+  clearTimeout(TYPING.expireTimer);
+  if(!msgFirebaseOn()) return;
+  const other = role==='admin' ? 'teacher' : 'admin';
+  try{
+    TYPING.ref = fbDb.ref(schoolDataRefPath()+'/typing/'+teacherId+'/'+other);
+    TYPING.handler = snap=>{
+      const v = snap.val();
+      const age = v && v.ts ? (nowServer() - v.ts) : Infinity;
+      const on = age < 7000;
+      clearTimeout(TYPING.expireTimer);
+      TYPING.active = on;
+      if(on) TYPING.expireTimer = setTimeout(()=>{ TYPING.active = false; applyTypingIndicator(); }, Math.max(500, 7000 - age));
+      applyTypingIndicator();
+    };
+    TYPING.ref.on('value', TYPING.handler, ()=>{});
+  }catch(e){}
+  applyTypingIndicator();
+}
+function wireTypingInput(teacherId, role){
+  const ta = document.getElementById('msg-compose-text');
+  if(ta && !ta.dataset.typingWired){
+    ta.dataset.typingWired = '1';
+    ta.addEventListener('input', ()=>{ if(ta.value.trim()) typingPing(teacherId, role); else typingStop(); });
+    ta.addEventListener('blur', ()=>typingStop());
+  }
+  const form = document.getElementById('msg-compose-form');
+  if(form && !form.dataset.typingWired){
+    form.dataset.typingWired = '1';
+    form.addEventListener('submit', ()=>typingStop(), true);
+  }
+}
+
+
+/* ===================== NOTIFIKASYON PUSH (FCM) =====================
+   Pou mesaj yo rive menm lè app la fèmen/an arye plan. Sa mande :
+   plugin @capacitor/push-notifications nan APK la + Cloud Function (dosye push-setup).
+   Si plugin nan pa la (navigatè, ansyen APK), tout bagay sa a rete san efè. */
+const PUSH = { token:null, key:null, started:false, uid:null };
+function pushPlugin(){
+  try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) || null; }catch(e){ return null; }
+}
+function pushTokenKey(t){ return String(t).replace(/[.#$\[\]\/]/g,'_'); }
+async function savePushToken(token){
+  try{
+    const u = fbAuth && fbAuth.currentUser;
+    if(!token || !u || u.isAnonymous || !msgFirebaseOn()) return;
+    PUSH.token = token; PUSH.key = pushTokenKey(token); PUSH.uid = u.uid;
+    await fbDb.ref(schoolDataRefPath()+'/pushTokens/'+u.uid+'/'+PUSH.key).set({ t: Date.now(), role: _notifRole || null, token });
+  }catch(e){ console.warn('Token push pa sove', e); }
+}
+async function removePushToken(){
+  try{
+    if(PUSH.uid && PUSH.key && msgFirebaseOn()){
+      await withTimeout(fbDb.ref(schoolDataRefPath()+'/pushTokens/'+PUSH.uid+'/'+PUSH.key).remove(), 4000);
+    }
+  }catch(e){}
+  PUSH.token = null; PUSH.key = null; PUSH.uid = null;
+}
+function openMessagesFromPush(data){
+  const role = _notifRole;
+  if(!role || !DATA) return;
+  if(role==='admin'){ ui.adminView='mesaj'; ui.msgMeda=false; ui.msgTeacherId = (data && data.teacherId) || ui.msgTeacherId; ui.msgShowProfile=false; render('admin'); }
+  else { ui.teacherView='mesaj'; render('teacher'); }
+}
+async function initPush(){
+  const P = pushPlugin();
+  const u = (typeof fbAuth!=='undefined' && fbAuth) ? fbAuth.currentUser : null;
+  if(!P || !msgFirebaseOn() || !u || u.isAnonymous) return;
+  if(PUSH.started){ if(PUSH.token && PUSH.uid!==u.uid) savePushToken(PUSH.token); return; }
+  PUSH.started = true;
+  try{
+    P.addListener('registration', t=>savePushToken(t && t.value));
+    P.addListener('registrationError', e=>console.warn('Push erè', e));
+    P.addListener('pushNotificationActionPerformed', a=>openMessagesFromPush(a && a.notification && a.notification.data));
+    /* Si app la louvri, toast la deja montre mesaj la : nou pa fè anyen ak push la */
+    P.addListener('pushNotificationReceived', ()=>{});
+    let perm = await P.checkPermissions();
+    if(perm.receive==='prompt' || perm.receive==='prompt-with-rationale') perm = await P.requestPermissions();
+    if(perm.receive!=='granted'){ PUSH.started = false; return; }
+    try{ await P.createChannel({ id:'messages', name:'Mesaj', description:'Nouvo mesaj', importance:4, visibility:1, vibration:true }); }catch(e){}
+    await P.register();
+  }catch(e){ console.warn('initPush', e); PUSH.started = false; }
+}
+/* Mete yon ti evènman nan "pushQueue" : Cloud Function nan li, voye push la, epi efase l. */
+function pushRecipients(msg){
+  const me = fbAuth && fbAuth.currentUser ? fbAuth.currentUser.uid : null;
+  let uids = [];
+  if(msg.sender==='admin'){ const t = findTeacherById(msg.teacherId); if(t && t.uid) uids = [t.uid]; }
+  else uids = (DATA.admins||[]).map(a=>a.uid).filter(Boolean);
+  return Array.from(new Set(uids)).filter(x=>x!==me);
+}
+function enqueuePush(msg){
+  try{
+    if(!msg || !msgFirebaseOn()) return;
+    const to = pushRecipients(msg);
+    if(!to.length) return;
+    let fromLabel = 'Administrasyon';
+    if(msg.sender==='admin'){ const a = (DATA.admins||[]).find(x=>x.username===msg.senderUsername); if(a && a.name) fromLabel = a.name; }
+    else { fromLabel = teacherDisplayName(findTeacherById(msg.teacherId)) || 'Pwofesè'; }
+    const body = msg.text ? String(msg.text).slice(0, 90) : '📷 Foto';
+    fbDb.ref(schoolDataRefPath()+'/pushQueue').push({ to, title:'Nouvo mesaj de '+fromLabel, body, teacherId:msg.teacherId||null, mid:msg.id, ts: serverTs() }).catch(()=>{});
+  }catch(e){}
+}
 
 /* Konpare done fre yo (ki soti swa nan Firebase, swa nan ansyen depo a) ak
    sa n gen lokalman, epi deklannche notifikasyon pou nouvo mesaj yo. */
@@ -2484,6 +2651,7 @@ function diffAndNotifyMessages(fresh, role){
   const relevantNew = freshMsgs.filter(m=> !knownIds.has(m.id) && m.sender===otherSender &&
     (role==='admin' || m.teacherId===session.teacherId));
   DATA.messages = keepLocal.length ? freshMsgs.concat(keepLocal) : freshMsgs;
+  if(relevantNew.length){ TYPING.active = false; }
   relevantNew.forEach(m=>notifyNewMessage(m, role));
   refreshMessagingUI(role);
 }
@@ -3224,7 +3392,7 @@ function render(view){
   else if(view==='admin') app.innerHTML = viewAdmin();
   else if(view==='teacher') app.innerHTML = viewTeacher();
   wireEvents(view);
-  if(view==='admin' || view==='teacher') startMessageNotifications(view);
+  if(view==='admin' || view==='teacher'){ startMessageNotifications(view); initPush(); }
   else stopMessageNotifications();
   /* Balans & Peman — chak fonksyon la pwoteje pa try/catch: yon erè isit la pa dwe kraze afichaj app la */
   try{
@@ -7275,6 +7443,7 @@ function wireEvents(view){
 
   else if(view==='admin'){
     const doLogout = async ()=>{
+      await removePushToken();
       if(FIREBASE_ENABLED && fbAuth){ try{ await fbAuth.signOut(); }catch(e){} await ensureBaselineAuth(); }
       session={role:null,classId:null,teacherId:null,adminUsername:null}; ui.authMode=null; ui.allowJoinSignup=false; render('login');
     };
@@ -7621,7 +7790,7 @@ function wireEvents(view){
            separe, sovgad "li" lòt moun nan te ka ekraze sovgad "livre" sa a
            (oswa vis-vèrsa), e sa te fè ba wouj la pa janm parèt alafwa. */
         msg.delivered = true;
-        await saveMessages();
+        if(await saveMessages()) enqueuePush(msg);
         render('admin');
       });
       const bub = document.getElementById('msg-bubbles');
@@ -7921,6 +8090,7 @@ function wireEvents(view){
 
   else if(view==='teacher'){
     const doLogout = async ()=>{
+      await removePushToken();
       if(FIREBASE_ENABLED && fbAuth){ try{ await fbAuth.signOut(); }catch(e){} await ensureBaselineAuth(); }
       session={role:null,classId:null,teacherId:null,adminUsername:null}; render('login');
     };
@@ -7959,7 +8129,7 @@ function wireEvents(view){
         ui.msgComposePhoto = null;
         render('teacher');
         msg.delivered = true;
-        await saveMessages();
+        if(await saveMessages()) enqueuePush(msg);
         render('teacher');
       });
       const bub = document.getElementById('msg-bubbles');
