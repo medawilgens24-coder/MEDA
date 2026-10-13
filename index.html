@@ -1116,7 +1116,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.22';
+const APP_VERSION = '2.26.10.23';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -5663,6 +5663,7 @@ function tabSchedule(cls){
       <div class="card-head" style="margin:0"><span class="ic-wrap">${ICONS.calendar}</span><h3>Orè klas ${escapeHtml(cls.name)}</h3></div>
       <div style="display:flex;gap:10px">
         <button class="btn-small" id="add-schedule-row">${ICONS.plus}Ajoute plaj</button>
+        <button class="btn-small" id="save-schedule" style="background:var(--primary,#1e6fd9);color:#fff;border-color:transparent">Sove orè a</button>
         ${printStyleSelectHtml('schedule')}
         <button class="btn-small" id="print-schedule">${ICONS.printer}Enprime</button>
       </div>
@@ -8415,10 +8416,21 @@ function wireClassManager(cls, role){
       document.querySelectorAll('[data-sch-field]').forEach(inp=>{ if(applySchField(inp)) touched = true; });
       if(touched) saveData();
     };
+    const saveBtn = document.getElementById('save-schedule');
+    if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+      const label = saveBtn.textContent;
+      saveBtn.disabled = true; saveBtn.textContent = 'Ap sove...';
+      document.querySelectorAll('[data-sch-field]').forEach(applySchField);
+      await saveData();
+      const dot = document.getElementById('conn-status');
+      const failed = dot && dot.classList.contains('is-offline');
+      saveBtn.disabled = false; saveBtn.textContent = label;
+      showToast({ title: failed ? 'Orè a PA sove' : 'Orè a sove', message: failed ? 'Pa gen koneksyon — eseye ankò.' : 'Dènye modifikasyon yo anrejistre.', duration: 2500 });
+    });
     document.querySelectorAll('[data-sch-field]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
         applySchField(inp);
-        debounceSave(inp, async ()=>{ await saveData(); }, 300);
+        debounceSave(inp, async ()=>{ await saveData(); }, 10);
       });
       inp.addEventListener('change', async ()=>{
         applySchField(inp);
