@@ -8403,18 +8403,42 @@ function wireClassManager(cls, role){
   }
   else if(tab==='ore'){
     const sch = ensureSchedule(cls);
+    /* Mete valè a nan done yo IMEDYATMAN (pa tann debounce la), konsa nenpòt sovgad
+       ki fèt apre a ap toujou gen dènye modifikasyon an. */
+    const applySchField = (inp)=>{
+      const row = sch.rows.find(r=>r.id===inp.dataset.schRow);
+      if(row){ row[inp.dataset.schField] = inp.value.trim(); return true; }
+      return false;
+    };
+    const flushSchedule = ()=>{
+      let touched = false;
+      document.querySelectorAll('[data-sch-field]').forEach(inp=>{ if(applySchField(inp)) touched = true; });
+      if(touched) saveData();
+    };
     document.querySelectorAll('[data-sch-field]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
-        debounceSave(inp, async ()=>{
-          const row = sch.rows.find(r=>r.id===inp.dataset.schRow);
-          if(row){ row[inp.dataset.schField] = inp.value.trim(); await saveData(); }
-        }, 800);
+        applySchField(inp);
+        debounceSave(inp, async ()=>{ await saveData(); }, 300);
       });
       inp.addEventListener('change', async ()=>{
-        const row = sch.rows.find(r=>r.id===inp.dataset.schRow);
-        if(row){ row[inp.dataset.schField] = inp.value.trim(); await saveData(); }
+        applySchField(inp);
+        await saveData();
       });
+      inp.addEventListener('blur', ()=>{ applySchField(inp); saveData(); });
     });
+    /* Sove lè w kite paj la, chanje onglet, oswa mete aplikasyon an an background */
+    if(window.__schFlush){
+      document.removeEventListener('visibilitychange', window.__schFlush.vis);
+      window.removeEventListener('pagehide', window.__schFlush.hide);
+    }
+    window.__schFlush = {
+      vis: ()=>{ if(document.visibilityState==='hidden') flushSchedule(); },
+      hide: ()=>flushSchedule()
+    };
+    document.addEventListener('visibilitychange', window.__schFlush.vis);
+    window.addEventListener('pagehide', window.__schFlush.hide);
+    document.querySelectorAll('[data-ctab]').forEach(b=>b.addEventListener('mousedown', flushSchedule, true));
+    document.querySelectorAll('[data-ctab]').forEach(b=>b.addEventListener('touchstart', flushSchedule, {capture:true, passive:true}));
     document.querySelectorAll('[data-del-schedule-row]').forEach(b=>b.addEventListener('click', async ()=>{
       sch.rows = sch.rows.filter(r=>r.id!==b.dataset.delScheduleRow);
       await saveData(); role==='admin'? render('admin') : render('teacher');
