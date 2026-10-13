@@ -1116,7 +1116,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.24';
+const APP_VERSION = '2.26.10.25';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2243,6 +2243,27 @@ function debounceSave(el, fn, delay){
   clearTimeout(_debounceTimers.get(el));
   const t = setTimeout(fn, delay||900);
   _debounceTimers.set(el, t);
+}
+/* Sovgad RAPID pou orè a sèlman: voye sèlman `schedule` la (pa tout DATA a ak foto yo,
+   ki te voye de fwa — nan classes ak academicYears — a chak sovgad). */
+async function saveScheduleOnly(cls){
+  if(!(FIREBASE_ENABLED && fbDb)) return await saveData();
+  const dot = document.getElementById('conn-status');
+  try{
+    const idx = (DATA.classes||[]).indexOf(cls);
+    if(idx < 0) return await saveData();
+    const payload = JSON.parse(JSON.stringify(cls.schedule));
+    const updates = {};
+    updates['classes/'+idx+'/schedule'] = payload;
+    if(DATA.activeYear) updates['academicYears/'+DATA.activeYear+'/classes/'+idx+'/schedule'] = payload;
+    await fbDb.ref(schoolDataRefPath()).update(updates);
+    if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
+    return true;
+  }catch(e){
+    console.error('Erè sovgad orè', e);
+    if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
+    return false;
+  }
 }
 async function saveData(){
   syncActiveYearStore();
@@ -8416,7 +8437,7 @@ function wireClassManager(cls, role){
     const flushSchedule = ()=>{
       let touched = false;
       document.querySelectorAll('[data-sch-field]').forEach(inp=>{ if(applySchField(inp)) touched = true; });
-      if(touched) saveData();
+      if(touched) saveScheduleOnly(cls);
     };
     const saveBtn = document.getElementById('save-schedule');
     if(saveBtn) saveBtn.addEventListener('click', async ()=>{
@@ -8428,8 +8449,8 @@ function wireClassManager(cls, role){
       let res;
       try{
         res = await Promise.race([
-          saveData(),
-          new Promise(r=>setTimeout(()=>r('timeout'), 6000))
+          saveScheduleOnly(cls),
+          new Promise(r=>setTimeout(()=>r('timeout'), 12000))
         ]);
       }catch(e){ res = false; }
       let btnTxt, title, msg;
@@ -8443,13 +8464,13 @@ function wireClassManager(cls, role){
     document.querySelectorAll('[data-sch-field]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
         applySchField(inp);
-        debounceSave(inp, async ()=>{ await saveData(); }, 10);
+        debounceSave(inp, async ()=>{ await saveScheduleOnly(cls); }, 10);
       });
       inp.addEventListener('change', async ()=>{
         applySchField(inp);
-        await saveData();
+        await saveScheduleOnly(cls);
       });
-      inp.addEventListener('blur', ()=>{ applySchField(inp); saveData(); });
+      inp.addEventListener('blur', ()=>{ applySchField(inp); saveScheduleOnly(cls); });
     });
     /* Sove lè w kite paj la, chanje onglet, oswa mete aplikasyon an an background */
     if(window.__schFlush){
@@ -8466,12 +8487,12 @@ function wireClassManager(cls, role){
     document.querySelectorAll('[data-ctab]').forEach(b=>b.addEventListener('touchstart', flushSchedule, {capture:true, passive:true}));
     document.querySelectorAll('[data-del-schedule-row]').forEach(b=>b.addEventListener('click', async ()=>{
       sch.rows = sch.rows.filter(r=>r.id!==b.dataset.delScheduleRow);
-      await saveData(); role==='admin'? render('admin') : render('teacher');
+      await saveScheduleOnly(cls); role==='admin'? render('admin') : render('teacher');
     }));
     const addRow = document.getElementById('add-schedule-row');
     if(addRow) addRow.addEventListener('click', async ()=>{
       sch.rows.push({id:uid(), time:'', lendi:'', madi:'', mèkredi:'', jedi:'', vandredi:''});
-      await saveData(); role==='admin'? render('admin') : render('teacher');
+      await saveScheduleOnly(cls); role==='admin'? render('admin') : render('teacher');
     });
     const printSch = document.getElementById('print-schedule');
     if(printSch) printSch.addEventListener('click', ()=> printSchedule(cls));
