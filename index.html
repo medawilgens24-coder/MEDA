@@ -1116,7 +1116,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.23';
+const APP_VERSION = '2.26.10.24';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2259,10 +2259,12 @@ async function saveData(){
       await window.storage.set(schoolStorageKey(), JSON.stringify(DATA), true);
     }
     if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
+    return true;
   }
   catch(e){
     console.error('Erè pou anrejistre done yo', e);
     if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
+    return false;
   }
 }
 
@@ -8418,14 +8420,25 @@ function wireClassManager(cls, role){
     };
     const saveBtn = document.getElementById('save-schedule');
     if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-      const label = saveBtn.textContent;
-      saveBtn.disabled = true; saveBtn.textContent = 'Ap sove...';
+      if(saveBtn.dataset.busy==='1') return;
+      saveBtn.dataset.busy = '1';
+      const label = 'Sove orè a';
+      saveBtn.textContent = 'Ap sove...';
       document.querySelectorAll('[data-sch-field]').forEach(applySchField);
-      await saveData();
-      const dot = document.getElementById('conn-status');
-      const failed = dot && dot.classList.contains('is-offline');
-      saveBtn.disabled = false; saveBtn.textContent = label;
-      showToast({ title: failed ? 'Orè a PA sove' : 'Orè a sove', message: failed ? 'Pa gen koneksyon — eseye ankò.' : 'Dènye modifikasyon yo anrejistre.', duration: 2500 });
+      let res;
+      try{
+        res = await Promise.race([
+          saveData(),
+          new Promise(r=>setTimeout(()=>r('timeout'), 6000))
+        ]);
+      }catch(e){ res = false; }
+      let btnTxt, title, msg;
+      if(res === true){ btnTxt = '✓ Sove'; title = 'Orè a sove'; msg = 'Sèvè a konfime: dènye modifikasyon yo anrejistre.'; }
+      else if(res === 'timeout'){ btnTxt = '⚠ Pa konfime'; title = 'Sèvè a pa reponn'; msg = 'Orè a sove sou aparèy la men sèvè a poko konfime. Kite aplikasyon an louvri ak entènèt la limen, epi klike ankò.'; }
+      else { btnTxt = '✗ PA sove'; title = 'Orè a PA sove'; msg = 'Pa gen koneksyon ak sèvè a. Verifye entènèt la epi klike ankò.'; }
+      saveBtn.textContent = btnTxt;
+      showToast({ title, message: msg, duration: 6000 });
+      setTimeout(()=>{ saveBtn.textContent = label; saveBtn.dataset.busy = '0'; }, 3500);
     });
     document.querySelectorAll('[data-sch-field]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
