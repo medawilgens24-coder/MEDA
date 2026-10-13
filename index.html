@@ -983,6 +983,42 @@
   .pf-prestige-rule{width:140px;height:2px;background:#5C1A1A;margin:10px auto 16px;}
   .pf-prestige-meta{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 22px;font-size:12.5px;color:#463030;margin-bottom:18px;page-break-inside:avoid;break-inside:avoid;}
   .pf-prestige-body{font-size:13.5px;text-align:left;}
+  /* ---- Modèl 11 : OFISYÈL — kad enstitisyonèl mawin, tab pwòp ---- */
+  .pf-official,.pf-exec{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .pf-official{font-family:Georgia,'Times New Roman',serif;color:#1a1f2b;background:#fff;padding:28px 32px 26px;border:1px solid #14284B;box-shadow:inset 0 0 0 5px #fff,inset 0 0 0 6.5px #14284B;}
+  .pf-of-head{display:flex;align-items:center;justify-content:space-between;gap:14px;page-break-inside:avoid;break-inside:avoid;}
+  .pf-of-stamp{width:70px;flex:none;display:flex;align-items:center;justify-content:center;}
+  .pf-of-stamp .p-stamp-img{width:64px;height:64px;object-fit:contain;}
+  .pf-of-titles{flex:1;text-align:center;}
+  .pf-of-school{font-size:19px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#14284B;line-height:1.25;}
+  .pf-of-titles .p-school-meta{font-size:10.5px;color:#4a5568;margin-top:4px;line-height:1.5;}
+  .pf-of-rule{height:0;border-top:3px solid #14284B;border-bottom:1px solid #14284B;padding-top:2px;margin:12px 0 10px;}
+  .pf-of-doc{text-align:center;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#14284B;margin-bottom:12px;page-break-inside:avoid;break-inside:avoid;}
+  .pf-of-meta{border:1px solid #C9D0DC;background:#F5F7FB;padding:7px 12px;margin-bottom:14px;font-family:Arial,Helvetica,sans-serif;font-size:11.5px;color:#27303f;page-break-inside:avoid;break-inside:avoid;}
+  .pf-of-metarow{display:flex;justify-content:space-between;gap:16px;padding:3px 0;}
+  .pf-of-metarow + .pf-of-metarow{border-top:1px dotted #B8C0CE;}
+  .pf-of-body{font-family:Arial,Helvetica,sans-serif;font-size:12.5px;}
+  .pf-official .p-table,.pf-official .p-table th{border-radius:0;}
+  .pf-official .p-table{border:1px solid #14284B;}
+  .pf-official .p-table th{background:#14284B;color:#fff;border:1px solid #14284B;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;text-align:center;}
+  .pf-official .p-table td{border:1px solid #C9D0DC;}
+  .pf-official .p-table tbody tr:nth-child(even) td{background:#F5F7FB;}
+  /* ---- Modèl 12 : EGZEKITIF — modèn, sèlman liy orizontal ---- */
+  .pf-exec{font-family:Arial,Helvetica,sans-serif;color:#1b2430;background:#fff;border-top:6px solid #14284B;padding:20px 24px 22px;}
+  .pf-ex-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;border-bottom:1px solid #D5DBE5;margin-bottom:12px;page-break-inside:avoid;break-inside:avoid;}
+  .pf-ex-stamp{flex:none;}
+  .pf-ex-stamp .p-stamp-img{width:58px;height:58px;object-fit:contain;}
+  .pf-ex-school{font-size:19px;font-weight:700;color:#14284B;line-height:1.25;}
+  .pf-ex-sub{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#5b6676;margin-top:3px;}
+  .pf-ex-titles .p-school-meta{font-size:10.5px;color:#6b7686;margin-top:4px;}
+  .pf-ex-meta{display:flex;flex-wrap:wrap;gap:6px 8px;margin-bottom:14px;font-size:11.5px;color:#27303f;page-break-inside:avoid;break-inside:avoid;}
+  .pf-ex-meta span{background:#F1F4F9;border-left:3px solid #14284B;padding:5px 10px;border-radius:2px;}
+  .pf-ex-body{font-size:12.5px;}
+  .pf-exec .p-table{border:none;}
+  .pf-exec .p-table th{background:#fff;color:#14284B;border:none;border-bottom:2px solid #14284B;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;text-align:center;}
+  .pf-exec .p-table td{border:none;border-bottom:1px solid #E1E6EE;}
+  .pf-exec .p-table tbody tr:nth-child(even) td{background:#F8FAFC;}
+  html.theme-dark .pf-official,html.theme-dark .pf-exec{background:#fff;color:#1a1f2b;}
   html.theme-dark .pf-gold,html.theme-dark .pf-corp,html.theme-dark .pf-deco,html.theme-dark .pf-band,html.theme-dark .pf-prestige{background:#fff;color:#222;}
 
   /* ============ CUSTOM DIALOG (alert / confirm / prompt) ============ */
@@ -1116,7 +1152,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.25';
+const APP_VERSION = '2.26.10.26';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -3124,6 +3160,8 @@ function printDateStr(){ return new Date().toLocaleDateString('fr-FR'); }
    kalite dokiman ("key") sonje dènye estil administratè a te chwazi pou
    li, gras a localStorage, san sa pa afekte lòt kalite dokiman yo. */
 const PRINT_STYLES = [
+  { id:'official',   label:'Ofisyèl' },
+  { id:'executive',  label:'Egzekitif' },
   { id:'classic',  label:'Klasik' },
   { id:'elegant',  label:'Elegant' },
   { id:'modern',   label:'Modèn' },
@@ -3138,8 +3176,9 @@ const PRINT_STYLES = [
 function getPrintStyle(key){
   try{
     const v = localStorage.getItem('printStyle_'+key);
-    return PRINT_STYLES.some(s=>s.id===v) ? v : 'classic';
-  }catch(e){ return 'classic'; }
+    const def = (key==='schedule' || key==='bulletin') ? 'official' : 'classic';
+    return PRINT_STYLES.some(s=>s.id===v) ? v : def;
+  }catch(e){ return (key==='schedule' || key==='bulletin') ? 'official' : 'classic'; }
 }
 function setPrintStyle(key, id){
   try{ localStorage.setItem('printStyle_'+key, id); }catch(e){}
@@ -3157,6 +3196,40 @@ function printStyleSelectHtml(key){
 function renderPrintFrame(styleId, {subtitle, metaRows, bodyHtml, signHtml}){
   const school = escapeHtml(DATA.schoolName);
   const metaFlat = metaRows.flat();
+  if(styleId==='official'){
+    return `
+    <div class="pf-official">
+      <div class="pf-of-head">
+        <div class="pf-of-stamp">${officialStampHtml()}</div>
+        <div class="pf-of-titles">
+          <div class="pf-of-school">${school}</div>
+          ${schoolHeaderMetaHtml()}
+        </div>
+        <div class="pf-of-stamp"></div>
+      </div>
+      <div class="pf-of-rule"></div>
+      <div class="pf-of-doc">${subtitle}</div>
+      <div class="pf-of-meta">${metaRows.map(r=>`<div class="pf-of-metarow">${r.map(x=>`<span>${x}</span>`).join('')}</div>`).join('')}</div>
+      <div class="pf-of-body">${bodyHtml}</div>
+      ${signHtml}
+    </div>`;
+  }
+  if(styleId==='executive'){
+    return `
+    <div class="pf-exec">
+      <div class="pf-ex-head">
+        <div class="pf-ex-stamp">${officialStampHtml()}</div>
+        <div class="pf-ex-titles">
+          <div class="pf-ex-school">${school}</div>
+          <div class="pf-ex-sub">${subtitle}</div>
+          ${schoolHeaderMetaHtml()}
+        </div>
+      </div>
+      <div class="pf-ex-meta">${metaFlat.map(x=>`<span>${x}</span>`).join('')}</div>
+      <div class="pf-ex-body">${bodyHtml}</div>
+      ${signHtml}
+    </div>`;
+  }
   if(styleId==='elegant'){
     return `
     <div class="pf-elegant">
@@ -4283,7 +4356,7 @@ const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMo
    palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv).
    docTypes vid (san anyen ladan) = CHAK tip dokiman ofisyèl (sètifika,
    atestasyon, elatriye) peye pa inite, kèlkeswa modèl/koulè/ekriti chwazi. */
-const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant'], palmaresStyles:['classic','elegant'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
+const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant','official','executive'], palmaresStyles:['classic','elegant','official','executive'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
 const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
