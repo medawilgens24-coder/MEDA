@@ -48,6 +48,7 @@
     --blue:#1877F2;
     --blue-dark:#166FE0;
     --blue-soft:#E7F0FE;
+    --accent:#C79A3B;
     --bg:#F0F2F5;
     --card:#FFFFFF;
     --text:#050505;
@@ -1019,6 +1020,62 @@
   .pf-exec .p-table td{border:none;border-bottom:1px solid #E1E6EE;}
   .pf-exec .p-table tbody tr:nth-child(even) td{background:#F8FAFC;}
   html.theme-dark .pf-official,html.theme-dark .pf-exec{background:#fff;color:#1a1f2b;}
+  /* ============ KOULÈ ENTEFAS (dekorasyon kolore + chwa koulè) ============ */
+  .uc-box{display:flex;flex-direction:column;gap:14px;padding:14px 0 4px;border-top:1px solid var(--line-soft);margin-top:8px;}
+  .uc-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .uc-chip{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:2px solid transparent;border-radius:12px;padding:6px 8px;color:var(--text);font-size:11.5px;}
+  .uc-chip.on{border-color:var(--blue);background:var(--blue-soft);}
+  .uc-badge{font-size:10.5px;font-weight:700;color:#8a5a00;background:#FBF1DD;border-radius:999px;padding:2px 7px;white-space:nowrap;}
+  .uc-badge[hidden]{display:none;}
+  .uc-sw{width:38px;height:38px;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.22);}
+  .uc-pick-row{display:flex;gap:18px;flex-wrap:wrap;}
+  .uc-pick-row label{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text);}
+  .uc-pick-row input[type=color]{width:46px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--card);}
+  .uc-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .dep-card{background:linear-gradient(135deg,#15803D,#0F5E3A);border:none;color:#fff;position:relative;overflow:hidden;}
+  .dep-card::before{content:"";position:absolute;right:-50px;top:-60px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.1);}
+  .dep-card > *{position:relative;}
+  .dep-card .card-head{border-bottom-color:rgba(255,255,255,.2);}
+  .dep-card .card-head h3{color:#fff;}
+  .dep-card .card-head .ic-wrap{background:rgba(255,255,255,.2) !important;color:#fff !important;box-shadow:none !important;}
+  .dep-total{font-size:36px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .dep-total small{font-size:16px;font-weight:700;opacity:.85;}
+  .dep-sub{font-size:12.5px;opacity:.88;margin:4px 0 14px;}
+  .dep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
+  .dep-box{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;}
+  .dep-box span{font-size:11.5px;opacity:.88;text-transform:uppercase;letter-spacing:.04em;}
+  .dep-box b{font-size:17px;font-variant-numeric:tabular-nums;}
+  .dep-card .hint{color:rgba(255,255,255,.8);}
+  html.colorful .page-head{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 62%,var(--accent) 160%);border:none;border-radius:18px;padding:18px 20px;box-shadow:0 6px 18px rgba(0,0,0,.14);position:relative;overflow:hidden;}
+  html.colorful .page-head::before{content:"";position:absolute;right:-40px;top:-55px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.13);}
+  html.colorful .page-head > *{position:relative;}
+  html.colorful .page-head .page-title,html.colorful .page-head h1{color:#fff;}
+  html.colorful .page-title::after{background:rgba(255,255,255,.8);}
+  html.colorful .page-head .page-sub{color:rgba(255,255,255,.9);}
+  html.colorful .card-head .ic-wrap{background:linear-gradient(135deg,var(--blue),var(--accent));color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.16);}
+  html.colorful .card:nth-of-type(5n+2) .card-head .ic-wrap{background:linear-gradient(135deg,#16A34A,#0F766E);}
+  html.colorful .card:nth-of-type(5n+3) .card-head .ic-wrap{background:linear-gradient(135deg,#7C5CDB,#4F46E5);}
+  html.colorful .card:nth-of-type(5n+4) .card-head .ic-wrap{background:linear-gradient(135deg,#E8890C,#DC2626);}
+  html.colorful .card:nth-of-type(5n) .card-head .ic-wrap{background:linear-gradient(135deg,#0E9A8B,#0891B2);}
+  html.colorful .stat-box{background:linear-gradient(135deg,var(--blue),var(--blue-dark));border:none;color:#fff;}
+  html.colorful .stat-box::before{display:none;}
+  html.colorful .stat-box .num,html.colorful .stat-box .lbl{color:#fff;}
+  html.colorful .stat-box .lbl{opacity:.88;}
+  html.colorful .stat-box .stat-ic{background:rgba(255,255,255,.22);color:#fff;}
+  html.colorful .stat-box.sb-green{background:linear-gradient(135deg,#16A34A,#0F766E);}
+  html.colorful .stat-box.sb-purple{background:linear-gradient(135deg,#7C5CDB,#4F46E5);}
+  html.colorful .stat-box.sb-teal{background:linear-gradient(135deg,#0E9A8B,#0891B2);}
+  html.colorful .stat-box.sb-gold{background:linear-gradient(135deg,#E8A317,#D97706);}
+  html.colorful .sb-link:nth-child(5n+2) .ic-wrap{background:rgba(22,163,74,.15);color:#16A34A;}
+  html.colorful .sb-link:nth-child(5n+3) .ic-wrap{background:rgba(124,92,219,.15);color:#7C5CDB;}
+  html.colorful .sb-link:nth-child(5n+4) .ic-wrap{background:rgba(232,137,12,.16);color:#E8890C;}
+  html.colorful .sb-link:nth-child(5n) .ic-wrap{background:rgba(14,154,139,.15);color:#0E9A8B;}
+  html.colorful .sb-link.active .ic-wrap{background:var(--blue);color:#fff;}
+  html.colorful .btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));}
+  html.colorful .card:has(> .wal-balance){background:linear-gradient(135deg,#15803D,#0F5E3A);border:none;color:#fff;}
+  html.colorful .card:has(> .wal-balance) .wal-balance,html.colorful .card:has(> .wal-balance) .card-head h3,html.colorful .card:has(> .wal-balance) .wal-sub{color:#fff;}
+  html.colorful .card:has(> .wal-balance) .card-head{border-bottom-color:rgba(255,255,255,.22);}
+  html.colorful .card:has(> .wal-balance) .card-head .ic-wrap{background:rgba(255,255,255,.2);box-shadow:none;}
   html.theme-dark .pf-gold,html.theme-dark .pf-corp,html.theme-dark .pf-deco,html.theme-dark .pf-band,html.theme-dark .pf-prestige{background:#fff;color:#222;}
 
   /* ============ CUSTOM DIALOG (alert / confirm / prompt) ============ */
@@ -1152,7 +1209,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.26';
+const APP_VERSION = '2.26.10.28';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2108,6 +2165,7 @@ function printStampSvg(stamp){
 
 /* ---- Aparans (tèm klè / fonse) — preferans pèsonèl aparèy la ---- */
 async function loadAppearance(){
+  await loadUserColors();
   try{ const r = await window.storage.get('appearance', false); if(r) return r.value; }catch(e){}
   try{ const v = localStorage.getItem('appearance'); if(v) return v; }catch(e){}
   return 'light';
@@ -2118,7 +2176,190 @@ async function saveAppearance(mode){
 }
 function applyAppearance(mode){
   document.documentElement.classList.toggle('theme-dark', mode==='dark');
+  try{ applyUserColors(); }catch(e){}
 }
+/* ---- Koulè entefas — chak itilizatè chwazi pa l (aparèy li a sèlman) ---- */
+const COLOR_PRESETS = [
+  { id:'blue',    label:'Ble',      p:'#1877F2', a:'#C79A3B' },
+  { id:'emerald', label:'Emwod',    p:'#12804A', a:'#E0A800' },
+  { id:'teal',    label:'Twikwaz',  p:'#0E9A8B', a:'#1877F2' },
+  { id:'violet',  label:'Vyolèt',   p:'#6D4AE0', a:'#E8590C', premium:true },
+  { id:'sunset',  label:'Solèy',    p:'#E8590C', a:'#7C5CDB', premium:true },
+  { id:'rose',    label:'Woz',      p:'#D6336C', a:'#0E9A8B', premium:true },
+  { id:'night',   label:'Mawin',    p:'#14284B', a:'#C79A3B', premium:true },
+  { id:'aurora',  label:'Orora',    p:'#7C3AED', a:'#06B6D4', premium:true },
+  { id:'cherry',  label:'Sizye',    p:'#BE123C', a:'#F59E0B', premium:true },
+  { id:'royal',   label:'Wayal',    p:'#4C1D95', a:'#F2B705', premium:true },
+  { id:'ocean',   label:'Oseyan',   p:'#0369A1', a:'#F97316', premium:true }
+];
+const COLOR_DEFAULT = { primary:'#1877F2', accent:'#C79A3B', colorful:true, preset:'blue' };
+let USER_COLORS = Object.assign({}, COLOR_DEFAULT);
+function ucHex(h){ h=String(h||'').trim(); return /^#[0-9a-f]{6}$/i.test(h) ? h.toUpperCase() : null; }
+function ucRgb(h){ return [1,3,5].map(i=>parseInt(h.substr(i,2),16)); }
+function ucToHex(r){ return '#'+r.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('').toUpperCase(); }
+function ucMix(a,b,t){ const x=ucRgb(a), y=ucRgb(b); return ucToHex(x.map((v,i)=>v*(1-t)+y[i]*t)); }
+function ucLum(h){ const c=ucRgb(h).map(v=>{ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
+function applyUserColors(){
+  const root = document.documentElement, c = USER_COLORS;
+  let p = ucHex(c.primary) || COLOR_DEFAULT.primary;
+  const a = ucHex(c.accent) || COLOR_DEFAULT.accent;
+  const dark = root.classList.contains('theme-dark');
+  let g = 0; while(ucLum(p) > 0.45 && g++ < 12) p = ucMix(p,'#000000',.12);   /* tèks blan toujou li sou koulè a */
+  g = 0; if(dark){ while(ucLum(p) < 0.08 && g++ < 12) p = ucMix(p,'#FFFFFF',.14); }  /* pa twò fonse sou fon nwa */
+  const st = root.style;
+  st.setProperty('--blue', p);
+  st.setProperty('--blue-dark', ucMix(p,'#000000',.12));
+  st.setProperty('--blue-soft', dark ? ucMix(p,'#242526',.78) : ucMix(p,'#FFFFFF',.88));
+  st.setProperty('--accent', a);
+  root.classList.toggle('colorful', c.colorful !== false);
+  try{ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', p); }catch(e){}
+}
+function ucSave(){
+  const s = JSON.stringify(USER_COLORS);
+  try{ localStorage.setItem('userColors', s); }catch(e){}
+  try{ const r = window.storage.set('userColors', s, false); if(r && r.catch) r.catch(()=>{}); }catch(e){}
+}
+async function loadUserColors(){
+  try{ const r = await window.storage.get('userColors', false); if(r && r.value){ Object.assign(USER_COLORS, JSON.parse(r.value)); } }catch(e){}
+}
+(function(){ try{ const v = localStorage.getItem('userColors'); if(v) Object.assign(USER_COLORS, JSON.parse(v)); }catch(e){} applyUserColors(); })();
+function colorSettingsHtml(){
+  const c = USER_COLORS;
+  const chips = COLOR_PRESETS.map(x=>`<button type="button" class="uc-chip ${c.preset===x.id?'on':''}" data-uc-preset="${x.id}" title="${x.label}"><span class="uc-sw" style="background:linear-gradient(135deg,${x.p},${x.a})"></span><span class="uc-nm">${x.label}</span><span class="uc-badge" data-uc-badge="${x.id}" ${(x.premium && !ucCanUse(x.id))?'':'hidden'}>🔒 ${fmtG(PRICES.color)} G</span></button>`).join('');
+  return `<div class="uc-box">
+    <div><div class="ttxt">Koulè aplikasyon an</div><div class="tsub">Chwazi yon koulè oswa mete pa w. Koulè ki gen 🔒 peye yon sèl fwa epi ou kenbe yo pou tout tan. Aplike sèlman sou aparèy sa a.</div></div>
+    <div class="uc-chips">${chips}</div>
+    <div class="uc-pick-row" data-uc-custom>
+      <label>Koulè prensipal<input type="color" data-uc-pick="primary" value="${ucHex(c.primary)||'#1877F2'}"></label>
+      <label>Koulè segondè<input type="color" data-uc-pick="accent" value="${ucHex(c.accent)||'#C79A3B'}"></label>
+      <span class="uc-badge" data-uc-badge="custom" ${ucCanUse('custom')?'hidden':''}>🔒 Koulè pèsonèl ${fmtG(PRICES.colorCustom)} G</span>
+    </div>
+    <div class="uc-row"><div><div class="ttxt">Dekorasyon kolore</div><div class="tsub">Bann degrade anlè paj yo, ikòn ak kat kolore.</div></div>
+      <label class="switch"><input type="checkbox" data-uc-colorful ${c.colorful!==false?'checked':''}><span class="slider"></span></label></div>
+    <button type="button" class="btn btn-ghost btn-pill" data-uc-reset>Retounen nan koulè orijinal</button>
+  </div>`;
+}
+function ucIsPremium(id){ if(id==='custom') return true; const x = COLOR_PRESETS.find(z=>z.id===id); return !!(x && x.premium); }
+function ucPriceOf(id){ return id==='custom' ? PRICES.colorCustom : PRICES.color; }
+function ucCanUse(id){
+  if(!ucIsPremium(id)) return true;
+  try{ if(isOwner() || walletVipActive()) return true; }catch(e){}
+  return !!(WALLET.colors && WALLET.colors[id]);
+}
+function ucSyncUi(){
+  document.querySelectorAll('.uc-chip').forEach(b=>b.classList.toggle('on', b.dataset.ucPreset===USER_COLORS.preset));
+  document.querySelectorAll('[data-uc-badge]').forEach(el=>{ el.hidden = ucCanUse(el.dataset.ucBadge); });
+  document.querySelectorAll('[data-uc-pick]').forEach(i=>{ const v = ucHex(USER_COLORS[i.dataset.ucPick]); if(v) i.value = v; });
+  document.querySelectorAll('[data-uc-colorful]').forEach(i=>{ i.checked = USER_COLORS.colorful !== false; });
+}
+/* Si aksè a ak yon koulè premium pa aktif ankò (pwopriyetè a retire l), retounen nan koulè orijinal. */
+function ucEnforce(){
+  if(isOwner() || walletVipActive() || !session || session.role!=='admin') return;
+  const id = USER_COLORS.preset;
+  if(ucIsPremium(id) && !ucCanUse(id)){
+    USER_COLORS = Object.assign({}, COLOR_DEFAULT); applyUserColors(); ucSave(); ucSyncUi();
+    showToast({title:'Koulè retire', message:'Aksè ak koulè premium sa a pa aktif ankò.'});
+  }
+}
+let _ucBusy = false;
+async function ucBuy(id){
+  if(_ucBusy) return false;
+  _ucBusy = true;
+  try{
+    const price = ucPriceOf(id);
+    const x = COLOR_PRESETS.find(z=>z.id===id);
+    const label = id==='custom' ? 'Koulè pèsonèl (chwazi nenpòt koulè)' : 'Koulè « '+(x?x.label:id)+' »';
+    if(!session || session.role!=='admin'){ await showAlert('Koulè sa a se yon opsyon peye. Mande administratè a pou l achte l sou kont li.'); return false; }
+    if(!FIREBASE_ENABLED || !fbDb || !WALLET.uid){ await showAlert('Ou dwe konekte ak kont administratè w pou achte yon koulè.'); return false; }
+    if(!navigator.onLine){ await showAlert('Ou bezwen entènèt pou achte yon koulè.'); return false; }
+    await walletEnsureLoaded();
+    if(WALLET.error){ await showAlert('Pa ka li balans ou kounye a ('+WALLET.error+'). Eseye ankò pita.'); return false; }
+    if(WALLET.balance < price){
+      const go = await showConfirm(label+' : '+fmtG(price)+' G (ou achte l yon sèl fwa, ou kenbe l pou tout tan).\nBalans ou : '+fmtG(WALLET.balance)+' G — li pa ase.\n\nVle ale ajoute lajan?', {okLabel:'Ajoute lajan'});
+      if(go){ ui.adminView='wal'; ui.walOwner=false; render('admin'); }
+      return false;
+    }
+    const ok = await showConfirm(label+' : '+fmtG(price)+' G\nYon sèl peman — ou kenbe koulè a pou tout tan (se sèlman pwopriyetè a ki ka retire l).\n\nBalans : '+fmtG(WALLET.balance)+' G → '+fmtG(WALLET.balance-price)+' G', {okLabel:'Achte '+fmtG(price)+' G', title:'Koulè premium'});
+    if(!ok) return false;
+    try{ await walletSpend('color:'+id, price); }
+    catch(e){ await showAlert('Peman an pa pase ('+((e && e.message)||'erè')+'). Verifye entènèt ou epi eseye ankò.'); return false; }
+    WALLET.colors[id] = true;
+    showToast({title:'Koulè achte', message:label+' se pou ou pou tout tan.'});
+    return true;
+  } finally { _ucBusy = false; }
+}
+async function ucChoosePreset(id){
+  const x = COLOR_PRESETS.find(z=>z.id===id);
+  if(!x) return;
+  if(!ucCanUse(id)){ const ok = await ucBuy(id); if(!ok){ ucSyncUi(); return; } }
+  USER_COLORS.primary = x.p; USER_COLORS.accent = x.a; USER_COLORS.preset = x.id;
+  applyUserColors(); ucSave(); ucSyncUi();
+}
+document.addEventListener('click', async e=>{
+  const t = e.target;
+  const pr = t.closest && t.closest('[data-uc-preset]');
+  if(pr){ ucChoosePreset(pr.dataset.ucPreset); return; }
+  if(t.closest && t.closest('[data-uc-reset]')){
+    USER_COLORS = Object.assign({}, COLOR_DEFAULT); applyUserColors(); ucSave(); ucSyncUi(); return;
+  }
+  const cp = t.closest && t.closest('input[type=color][data-uc-pick]');
+  if(cp && !ucCanUse('custom')){
+    e.preventDefault();
+    const ok = await ucBuy('custom'); ucSyncUi();
+    return;
+  }
+  /* ---- Pwopriyetè a : wè / retire aksè koulè premium yo ---- */
+  const lb = t.closest && t.closest('[data-own-colors]');
+  if(lb){
+    if(!isOwner()) return;
+    lb.disabled = true; lb.textContent = 'Ap chaje...';
+    const box = document.getElementById('own-colors-list');
+    try{
+      const uids = Array.from(new Set(OWNER.list.map(r=>r.uid)));
+      const rows = [];
+      for(const uid of uids){
+        const snap = await withTimeout(fbDb.ref('wallets/'+uid+'/spends').once('value'), 9000);
+        const v = snap.val() || {};
+        Object.keys(v).forEach(id=>{ const x=v[id]; if(x && String(x.kind||'').indexOf('color:')===0) rows.push({uid, id, kind:x.kind.slice(6), amount:x.amount, ts:x.ts, revoked:!!x.revoked}); });
+      }
+      rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      const who = uid => { const r = OWNER.list.find(z=>z.uid===uid); return r ? (r.name||r.email||uid) : uid; };
+      const nm = k => k==='custom' ? 'Koulè pèsonèl' : ((COLOR_PRESETS.find(z=>z.id===k)||{}).label || k);
+      box.innerHTML = rows.length ? rows.map(r=>`<div class="wal-req">
+        <div class="wal-req-top"><b>${escapeHtml(nm(r.kind))} · ${fmtG(r.amount)} G</b><span class="wal-st wal-st-${r.revoked?'rejected':'verified'}">${r.revoked?'Retire':'Aktif'}</span></div>
+        <div>${escapeHtml(who(r.uid))}</div>
+        <div class="hint" style="text-align:left;margin:4px 0 0">${escapeHtml(walDate(r.ts))}</div>
+        <div class="wal-actions"><button type="button" class="btn btn-ghost btn-pill" data-col-toggle="${escapeHtml(r.uid)}|${escapeHtml(r.id)}|${r.revoked?'1':'0'}">${r.revoked?'Remèt aksè':'Retire aksè'}</button></div>
+      </div>`).join('') : '<div class="empty-state">Pèsonn poko achte yon koulè.</div>';
+    }catch(err){
+      box.innerHTML = '<p class="error-msg">Pa ka li done yo ('+escapeHtml((err && err.message)||'erè')+').</p>';
+    }
+    lb.disabled = false; lb.textContent = 'Rechaje lis la';
+    return;
+  }
+  const tg = t.closest && t.closest('[data-col-toggle]');
+  if(tg && isOwner()){
+    const parts = tg.dataset.colToggle.split('|');
+    const revoke = parts[2] !== '1';
+    if(!await showConfirm(revoke ? 'Retire aksè ak koulè sa a pou itilizatè a? Pa gen ranbousman — li pa p ka itilize l ankò.' : 'Remèt aksè ak koulè sa a pou itilizatè a?', {danger:revoke})) return;
+    try{
+      await withTimeout(fbDb.ref('wallets/'+parts[0]+'/spends/'+parts[1]).update({revoked: revoke ? true : null}), 9000);
+      const lb2 = document.querySelector('[data-own-colors]'); if(lb2) lb2.click();
+    }catch(err){ await showAlert('Pa t kapab chanje ('+((err && err.message)||'erè')+').'); }
+  }
+});
+document.addEventListener('input', e=>{
+  const pk = e.target.closest && e.target.closest('[data-uc-pick]');
+  if(pk){
+    if(!ucCanUse('custom')){ ucSyncUi(); return; }
+    USER_COLORS[pk.dataset.ucPick] = pk.value; USER_COLORS.preset = 'custom'; applyUserColors(); ucSave(); ucSyncUi();
+  }
+});
+document.addEventListener('change', e=>{
+  const cf = e.target.closest && e.target.closest('[data-uc-colorful]');
+  if(cf){ USER_COLORS.colorful = !!cf.checked; applyUserColors(); ucSave(); }
+});
+
 
 /* ---- Fòm bouton navigasyon anba a (mobil) — preferans pèsonèl aparèy la ---- */
 const NAV_STYLES = [
@@ -4350,7 +4591,7 @@ function dataCleanupHtml(){
 const OWNER_EMAIL = 'medawilgens24@gmail.com';
 const NATCASH_RAW = '+50943011194';
 const NATCASH_DISPLAY = '+509 4301 1194';
-const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMonth:500 };
+const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMonth:500, color:15, colorCustom:30 };
 /* Gratis = premye yo nan lis la. Chanje lis sa yo si w vle chanje sa ki gratis.
    bulletinStyles = peman ENDIVIDYÈL (chak bilten se pou 1 sèl elèv).
    palmaresStyles = peman KOLEKTIF (yon sèl peman kouvri tout klas la, tout elèv).
@@ -4359,7 +4600,7 @@ const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMo
 const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant','official','executive'], palmaresStyles:['classic','elegant','official','executive'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
-const WALLET = { uid:null, loaded:false, error:null, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
+const WALLET = { uid:null, loaded:false, error:null, colors:{}, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
 const OWNER = { ref:null, handler:null, list:[], known:null };
 let SERVER_OFFSET = 0, _offsetRef = null;
 /* ===== Prezans (anliy/òfliy) — pou ba "livre" a sèlman parèt si moun nan
@@ -4470,7 +4711,7 @@ function isOwner(){
   return !!(u && !u.isAnonymous && String(u.email||'').toLowerCase()===OWNER_EMAIL);
 }
 function walletRecompute(v){
-  let cr=0, sp=0, pass=0, vip=0;
+  let cr=0, sp=0, pass=0, vip=0; const cols={};
   const credits = (v && v.credits) || {}, spends = (v && v.spends) || {};
   Object.keys(credits).forEach(k=>{ const c=credits[k]; if(c) cr += Number(c.amount)||0; });
   Object.keys(spends).forEach(k=>{
@@ -4478,12 +4719,14 @@ function walletRecompute(v){
     sp += Number(x.amount)||0;
     if(x.kind==='fontpass') pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
     if(x.kind==='vippass') vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
+    if(typeof x.kind==='string' && x.kind.indexOf('color:')===0 && !x.revoked) cols[x.kind.slice(6)] = true;   /* achte = pou tout tan, sof si pwopriyetè a retire l */
   });
   const wc = credits.welcome;
   WALLET.welcome = (wc && typeof wc==='object') ? { ts:Number(wc.ts)||0, amount:Number(wc.amount)||0 } : null;
   WALLET.balance = Math.round((cr-sp)*100)/100;
   WALLET.fontPassUntil = pass;
   WALLET.vipUntil = vip;
+  WALLET.colors = cols;
 }
 function walletFontPassActive(){ return WALLET.fontPassUntil > nowServer(); }
 function walletVipActive(){ return WALLET.vipUntil > nowServer(); }
@@ -4496,6 +4739,37 @@ function ownerFlatten(v){
   out.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   return out;
 }
+
+/* ---- Estatistik depo — SÈL pwopriyetè a wè sa (isOwner) ---- */
+function ownerDepositStats(){
+  const ok = OWNER.list.filter(r=>r.status==='verified' && r.id!=='welcome');
+  const pend = OWNER.list.filter(r=>r.status==='pending' && r.id!=='welcome');
+  const sum = a=>a.reduce((t,r)=>t+(Number(r.amount)||0),0);
+  const ts = r=>Number(r.verifiedAt||r.createdAt)||0;
+  const now = new Date();
+  const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return {
+    total:sum(ok), count:ok.length, users:new Set(ok.map(r=>r.uid)).size,
+    month:sum(ok.filter(r=>ts(r)>=m0)), today:sum(ok.filter(r=>ts(r)>=d0)),
+    pending:sum(pend), pendingCount:pend.length
+  };
+}
+function ownerDepositStatsHtml(){
+  if(!isOwner()) return '';
+  const t = ownerDepositStats();
+  return `<div class="card dep-card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.wallet}</span><h3>Total depo itilizatè yo</h3></div>
+    <div class="dep-total">${fmtG(t.total)} <small>G</small></div>
+    <div class="dep-sub">${t.count} depo verifye · ${t.users} itilizatè</div>
+    <div class="dep-grid">
+      <div class="dep-box dep-b1"><span>Jodi a</span><b>${fmtG(t.today)} G</b></div>
+      <div class="dep-box dep-b2"><span>Mwa sa a</span><b>${fmtG(t.month)} G</b></div>
+      <div class="dep-box dep-b3"><span>An atant (${t.pendingCount})</span><b>${fmtG(t.pending)} G</b></div>
+    </div>
+    <div class="hint" style="text-align:left;margin-top:10px">Total la kalkile sou peman verifye ki nan istorik la (kado byenveni pa konte). Si w efase yon peman verifye nan istorik la, total la ap bese.</div>
+  </div>`;
+}
 function ownerPendingCount(){ return OWNER.list.filter(r=>r.status==='pending' && r.id!=='welcome').length; }
 function walletUpdateBadge(){
   const b = document.getElementById('wal-badge');
@@ -4505,6 +4779,7 @@ function walletUpdateBadge(){
 }
 function walletRefreshUI(){
   try{
+    ucSyncUi();
     walletUpdateBadge();
     decoratePreviewWatermark();
     if(session && session.role==='admin' && (ui.adminView==='wal' || ui.adminView==='pwo')){
@@ -4524,7 +4799,7 @@ function startWalletWatch(){
       _offsetRef = fbDb.ref('.info/serverTimeOffset');
       _offsetRef.on('value', sn=>{ SERVER_OFFSET = Number(sn.val())||0; });
       WALLET.ref = fbDb.ref('wallets/'+u.uid);
-      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; walletRefreshUI(); walletMaybeClaimWelcome(); };
+      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; try{ ucEnforce(); }catch(e){} walletRefreshUI(); walletMaybeClaimWelcome(); };
       WALLET.ref.on('value', WALLET.handler, err=>{ WALLET.error = (err && err.code) || 'erè'; WALLET.loaded=true; walletRefreshUI(); });
       WALLET.reqRef = fbDb.ref('paymentRequests/'+u.uid);
       WALLET.reqHandler = snap=>{
@@ -4627,7 +4902,7 @@ function stopWalletWatch(){
   try{ if(WALLET.reqRef && WALLET.reqHandler) WALLET.reqRef.off('value', WALLET.reqHandler); }catch(e){}
   try{ if(_offsetRef) _offsetRef.off(); }catch(e){}
   WALLET.uid=null; WALLET.ref=null; WALLET.handler=null; WALLET.reqRef=null; WALLET.reqHandler=null;
-  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.vipUntil=0; WALLET.welcome=null; WALLET.welcomeTried=false; WALLET.reqs=[];
+  WALLET.reqStatus=null; WALLET.loaded=false; WALLET.error=null; WALLET.balance=0; WALLET.fontPassUntil=0; WALLET.vipUntil=0; WALLET.welcome=null; WALLET.welcomeTried=false; WALLET.colors={}; WALLET.reqs=[];
   _offsetRef = null;
   stopOwnerWatch();
 }
@@ -4800,6 +5075,7 @@ function adminWallet(me){
     ${passLine}
     ${errLine}
   </div>
+  ${owner ? ownerDepositStatsHtml() : ''}
   ${owner ? `<div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.idcard}</span><h3>Panèl pwopriyetè</h3></div>
     <button type="button" class="btn btn-primary btn-pill btn-block" id="wal-open-owner">Verifye peman yo (${pending} an atant)</button>
@@ -4838,6 +5114,7 @@ function adminWallet(me){
     <div class="wal-price"><div><b>Modèl dokiman premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(DOC_TEMPLATES, FREE.docTemplates))}</span></div><div class="pr">${fmtG(PRICES.doc)} G / dokiman</div></div>
     <div class="wal-price"><div><b>Estil bilten premium</b> <span class="hint" style="margin:0">(endividyèl)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.bulletinStyles))}</span></div><div class="pr">${fmtG(PRICES.bulletin)} G / bilten / elèv</div></div>
     <div class="wal-price"><div><b>Estil palmarès premium</b> <span class="hint" style="margin:0">(kolektif — tout klas)</span><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(PRINT_STYLES, FREE.palmaresStyles))}</span></div><div class="pr">${fmtG(PRICES.palmares)} G / klas</div></div>
+    <div class="wal-price"><div><b>Koulè premium</b> <span class="hint" style="margin:0">(achte yon fwa, pou tout tan)</span><br><span class="wal-sub">Gratis : Ble, Emwod, Twikwaz · Koulè pèsonèl : ${fmtG(PRICES.colorCustom)} G</span></div><div class="pr">${fmtG(PRICES.color)} G / koulè</div></div>
     <div class="wal-price"><div><b>Estil ekriti premium</b><br><span class="wal-sub">Gratis : ${escapeHtml(walLabels(DOC_FONTS, FREE.fonts))}</span></div><div class="pr">${fmtG(PRICES.fontDay)} G / jou</div></div>
   </div>
   <div class="card">
@@ -4878,6 +5155,13 @@ function adminOwnerPanel(me){
   </div>
   <div class="card">
     <button type="button" class="btn btn-ghost btn-pill" id="own-back">← Retounen nan Balans</button>
+  </div>
+  ${ownerDepositStatsHtml()}
+  <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.key}</span><h3>Koulè premium achte</h3></div>
+    <p class="hint" style="text-align:left;margin-bottom:10px">Wè ki moun ki achte koulè premium epi retire aksè si w bezwen (pa gen ranbousman). Lis la sòti nan itilizatè ki gen peman nan istorik la.</p>
+    <button type="button" class="btn btn-ghost btn-pill" data-own-colors>Chaje lis la</button>
+    <div id="own-colors-list" style="margin-top:10px"></div>
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.key}</span><h3>Konpare yon kòd NatCash</h3></div>
@@ -4962,7 +5246,7 @@ async function ownerReject(uid, id){
 async function ownerDeleteOne(uid, id){
   const r = OWNER.list.find(x=>x.uid===uid && x.id===id);
   if(!r) return;
-  if(!await showConfirm('Efase demann '+fmtG(r.amount)+' G sa a nan istorik la? Sa PAP retire okenn lajan sou balans itilizatè a si peman an te deja verifye — se jis lis istorik la.', {danger:true, okLabel:'Wi, efase l'})) return;
+  if(!await showConfirm('Efase demann '+fmtG(r.amount)+' G sa a nan istorik la? Sa PAP retire okenn lajan sou balans itilizatè a si peman an te deja verifye — se jis lis istorik la (men total depo a ap bese).', {danger:true, okLabel:'Wi, efase l'})) return;
   try{ await withTimeout(fbDb.ref('paymentRequests/'+uid+'/'+id).remove(), 9000); }
   catch(e){ await showAlert('Pa t kapab efase demann sa a ('+((e&&e.message)||'erè')+').'); }
 }
@@ -4972,7 +5256,7 @@ async function ownerDeleteOne(uid, id){
 async function ownerClearHistory(){
   const items = OWNER.list.filter(r=>r.status!=='pending');
   if(!items.length){ await showAlert('Pa gen okenn istorik pou efase.'); return; }
-  if(!await showConfirm('Efase TOUT '+items.length+' demann ki nan istorik la (verifye + rejte)? Sa PAP touche balans itilizatè yo ni demann ki an atant — se jis lis istorik la k ap disparèt nèt. Aksyon sa a pa ka anile.', {danger:true, okLabel:'Wi, efase tout istorik la'})) return;
+  if(!await showConfirm('Efase TOUT '+items.length+' demann ki nan istorik la (verifye + rejte)? Sa PAP touche balans itilizatè yo ni demann ki an atant — se jis lis istorik la k ap disparèt nèt (total depo a ap tounen sou zewo pou sa yo). Aksyon sa a pa ka anile.', {danger:true, okLabel:'Wi, efase tout istorik la'})) return;
   const up = {};
   items.forEach(r=>{ up['paymentRequests/'+r.uid+'/'+r.id] = null; });
   try{
@@ -5153,6 +5437,7 @@ function adminSettings(){
         ${NAV_STYLES.map(s=>`<option value="${s.id}" ${s.id===ui.navStyle?'selected':''}>${escapeHtml(s.label)}</option>`).join('')}
       </select>
     </div>
+    ${colorSettingsHtml()}
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.bell}</span><h3>Notifikasyon</h3></div>
@@ -5323,7 +5608,11 @@ function teacherProfileView(teacher){
       <div><div class="ttxt">Notifikasyon sistèm aparèy la</div><div class="tsub">Yon ti son ak yon bwat popup anndan aplikasyon an ap toujou parèt lè administrasyon voye yon nouvo mesaj. Aktive opsyon sa a si w vle resevwa yon notifikasyon nan sistèm aparèy la tou, menm lè tab la nan background. Aplike sèlman sou aparèy sa a.</div></div>
       <label class="switch"><input type="checkbox" id="teacher-notif-switch" ${ui.notifDesktop?'checked':''}><span class="slider"></span></label>
     </div>
-  </div>`;
+  </div>  <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.moon}</span><h3>Aparans</h3></div>
+    ${colorSettingsHtml()}
+  </div>
+  `;
 }
 
 /* ===================== CLASS MANAGER ===================== */
