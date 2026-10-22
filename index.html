@@ -1210,7 +1210,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.29';
+const APP_VERSION = '2.26.10.33';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1471,8 +1471,15 @@ function setBtnBusy(btn, label){
 }
 /* Fè kat (.card) nan yon paj vin akòdeyon: yo pliye pa default, yo plisye lè w klike
    sou tèt la (.card-head). openFirst: id (string) kat ki dwe rete plisye pa default. */
-function setupAccordion(root, openFirst){
+function setupAccordion(root, openFirst, stateKey){
   if(!root) return;
+  /* stateKey : sonje ki kat ki louvri nan ui.accState, konsa yon re-rann (chanje trimès, done k ap mete ajou...) pa louvri ni fèmen anyen poukont li. */
+  let openSet = null;
+  if(stateKey){
+    ui.accState = ui.accState || {};
+    if(!Array.isArray(ui.accState[stateKey])) ui.accState[stateKey] = (openFirst==null ? [] : (Array.isArray(openFirst) ? openFirst.slice() : [openFirst]));
+    openSet = ui.accState[stateKey];
+  }
   root.querySelectorAll(':scope > .card').forEach((card, i)=>{
     const head = card.querySelector(':scope > .card-head');
     if(!head) return;
@@ -1491,12 +1498,17 @@ function setupAccordion(root, openFirst){
       card.appendChild(body);
     }
     card.classList.add('acc-card');
-    const shouldOpen = openFirst!=null && (Array.isArray(openFirst) ? openFirst.includes(i) : i===openFirst);
+    const shouldOpen = openSet ? openSet.includes(i) : (openFirst!=null && (Array.isArray(openFirst) ? openFirst.includes(i) : i===openFirst));
     if(shouldOpen) card.classList.add('open');
     if(!head.dataset.accBound){
       head.dataset.accBound = '1';
       head.addEventListener('click', ()=>{
         card.classList.toggle('open');
+        if(openSet){
+          const k = openSet.indexOf(i);
+          if(card.classList.contains('open')){ if(k<0) openSet.push(i); }
+          else if(k>=0) openSet.splice(k,1);
+        }
       });
     }
   });
@@ -2283,8 +2295,8 @@ async function ucBuy(id){
     if(!navigator.onLine){ await showAlert('Ou bezwen entènèt pou achte yon koulè.'); return false; }
     await walletEnsureLoaded();
     if(WALLET.error){ await showAlert('Pa ka li balans ou kounye a ('+WALLET.error+'). Eseye ankò pita.'); return false; }
-    if(WALLET.balance < price){
-      const go = await showConfirm(label+' : '+fmtG(price)+' G (ou achte l yon sèl fwa, ou kenbe l pou tout tan).\nBalans ou : '+fmtG(WALLET.balance)+' G — li pa ase.\n\nVle ale ajoute lajan?', {okLabel:'Ajoute lajan'});
+    if(walletCash() < price){
+      const go = await showConfirm(label+' : '+fmtG(price)+' G (ou achte l yon sèl fwa, ou kenbe l pou tout tan).\nBalans disponib pou koulè : '+fmtG(walletCash())+' G'+(WALLET.giftLeft>0?' (kado byenveni an sèvi sèlman pou bilten ak dokiman)':'')+' — li pa ase.\n\nVle ale ajoute lajan?', {okLabel:'Ajoute lajan'});
       if(go){ ui.adminView='wal'; ui.walOwner=false; render('admin'); }
       return false;
     }
@@ -3869,6 +3881,7 @@ function viewLogin(){
               ${passField('tl-pass','Kòd sekrè','required autocomplete="current-password"')}
               ${ui.errors.login? `<p class="error-msg">${ui.errors.login}</p>`:''}
               <button class="btn btn-primary btn-pill btn-block" type="submit">Antre</button>
+              <p class="hint" style="text-align:right;margin:10px 0 0"><a id="forgot-pass-link-t" style="cursor:pointer;color:var(--blue);font-weight:600">Kòd bliye?</a></p>
             </form>
             <p class="hint" style="text-align:left;margin-top:10px">Premye fwa? Ou dwe <a id="teacher-goto-claim" style="cursor:pointer;color:var(--blue);font-weight:600">konfigire kont ou</a> ak kòd pwofesè a anvan.</p>
           ` : `
@@ -4608,7 +4621,7 @@ const PRICES = { doc:2.5, docType:10, bulletin:5, palmares:15, fontDay:10, vipMo
 const FREE = { docTemplates:['classic','elegant','modern'], bulletinStyles:['classic','elegant','official','executive'], palmaresStyles:['classic','elegant','official','executive'], fonts:['serif-classic','serif-elegant'], docTypes:[] };
 const MIN_TOPUP = 25;
 const TOPUP_CHOICES = [25,50,100,200];
-const WALLET = { uid:null, loaded:false, error:null, colors:{}, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
+const WALLET = { uid:null, loaded:false, error:null, colors:{}, giftLeft:0, balance:0, fontPassUntil:0, vipUntil:0, welcome:null, welcomeTried:false, reqs:[], ref:null, handler:null, reqRef:null, reqHandler:null, reqStatus:null };
 const OWNER = { ref:null, handler:null, list:[], known:null };
 let SERVER_OFFSET = 0, _offsetRef = null;
 /* ===== Prezans (anliy/òfliy) — pou ba "livre" a sèlman parèt si moun nan
@@ -4690,12 +4703,12 @@ async function buyVipPass(me){
   await walletEnsureLoaded();
   if(WALLET.error){ await showAlert('Pa ka li balans ou kounye a. Eseye ankò pita.'); return; }
   if(walletVipActive()){ await showAlert('Ou gen yon pas VIP ki deja aktif jiska '+escapeHtml(walDate(WALLET.vipUntil))+'.'); return; }
-  if(WALLET.balance < PRICES.vipMonth){
-    const go = await showConfirm('Pas VIP la koute '+fmtG(PRICES.vipMonth)+' G.\nBalans ou : '+fmtG(WALLET.balance)+' G\n\nPou ajoute lajan, voye l sou NatCash '+NATCASH_DISPLAY+' epi soumèt kòd tranzaksyon an.', {okLabel:'Ajoute lajan', title:'Balans ensifizan'});
+  if(walletCash() < PRICES.vipMonth){
+    const go = await showConfirm('Pas VIP la koute '+fmtG(PRICES.vipMonth)+' G.\nBalans ou : '+fmtG(WALLET.balance)+' G'+(WALLET.giftLeft>0?' (kado '+fmtG(WALLET.giftLeft)+' G sèvi sèlman pou bilten ak dokiman — pa pou pas VIP)':'')+'\n\nPou ajoute lajan, voye l sou NatCash '+NATCASH_DISPLAY+' epi soumèt kòd tranzaksyon an.', {okLabel:'Ajoute lajan', title:'Balans ensifizan'});
     if(go){ ui.walOwner=false; render('admin'); }
     return;
   }
-  const ok = await showConfirm('Achte pas VIP la pou 1 mwa?\n\n• Badj verifye (ble) bò kote non w\n• Tout modèl, estil ak dokiman premium gratis pandan mwa a\n\nBalans : '+fmtG(WALLET.balance)+' G → '+fmtG(WALLET.balance-PRICES.vipMonth)+' G', {okLabel:'Peye '+fmtG(PRICES.vipMonth)+' G', title:'Pas VIP — 1 mwa'});
+  const ok = await showConfirm('Achte pas VIP la pou 1 mwa?\n\n• Badj verifye (ble) bò kote non w\n• Tout modèl, estil ak dokiman premium gratis pandan mwa a\n• Tout koulè premium gratis pandan mwa a\n\nBalans : '+fmtG(WALLET.balance)+' G → '+fmtG(WALLET.balance-PRICES.vipMonth)+' G', {okLabel:'Peye '+fmtG(PRICES.vipMonth)+' G', title:'Pas VIP — 1 mwa'});
   if(!ok) return;
   try{
     await walletSpend('vippass', PRICES.vipMonth);
@@ -4719,12 +4732,13 @@ function isOwner(){
   return !!(u && !u.isAnonymous && String(u.email||'').toLowerCase()===OWNER_EMAIL);
 }
 function walletRecompute(v){
-  let cr=0, sp=0, pass=0, vip=0; const cols={};
+  let cr=0, sp=0, pass=0, vip=0, elig=0; const cols={};
   const credits = (v && v.credits) || {}, spends = (v && v.spends) || {};
   Object.keys(credits).forEach(k=>{ const c=credits[k]; if(c) cr += Number(c.amount)||0; });
   Object.keys(spends).forEach(k=>{
     const x=spends[k]; if(!x) return;
     sp += Number(x.amount)||0;
+    if(GIFT_KINDS.indexOf(x.kind)>=0) elig += Number(x.amount)||0;
     if(x.kind==='fontpass') pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
     if(x.kind==='vippass') vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
     if(typeof x.kind==='string' && x.kind.indexOf('color:')===0 && !x.revoked) cols[x.kind.slice(6)] = true;   /* achte = pou tout tan, sof si pwopriyetè a retire l */
@@ -4732,6 +4746,9 @@ function walletRecompute(v){
   const wc = credits.welcome;
   WALLET.welcome = (wc && typeof wc==='object') ? { ts:Number(wc.ts)||0, amount:Number(wc.amount)||0 } : null;
   WALLET.balance = Math.round((cr-sp)*100)/100;
+  /* Kado byenveni 50 G : rete disponib sèlman pou bilten ak dokiman. Ansyen kado 25 G yo pa limite. */
+  const gTot = WALLET.welcome ? WALLET.welcome.amount : 0;
+  WALLET.giftLeft = (gTot >= WELCOME_GIFT) ? Math.max(0, Math.round((gTot - elig)*100)/100) : 0;
   WALLET.fontPassUntil = pass;
   WALLET.vipUntil = vip;
   WALLET.colors = cols;
@@ -4817,7 +4834,7 @@ function startWalletWatch(){
           list.forEach(r=>{
             if(WALLET.reqStatus[r.id]==='pending' && r.status==='verified'){
               playNotifSound();
-              if(r.id==='welcome') showToast({title:'Byenveni sou Meda 🎁', message:'Ou resevwa '+fmtG(r.amount)+' G kado sou balans ou.', onClick:()=>{ ui.adminView='mesaj'; ui.msgMeda=true; ui.msgTeacherId=null; render('admin'); }});
+              if(r.id==='welcome') showToast({title:'Byenveni sou Meda 🎁', message:'Ou resevwa '+fmtG(r.amount)+' G kado sou balans ou. Li sèvi pou bilten ak dokiman.', onClick:()=>{ ui.adminView='mesaj'; ui.msgMeda=true; ui.msgTeacherId=null; render('admin'); }});
               else showToast({title:'Peman verifye', message:'+'+fmtG(r.amount)+' G ajoute sou balans ou.'});
             }
           });
@@ -4831,11 +4848,12 @@ function startWalletWatch(){
   }
   if(isOwner()) startOwnerWatch(); else stopOwnerWatch();
 }
-/* ---- KADO BYENVENI (25 G) + MESAJ OTOMATIK SOTI NAN PWOPRIYETÈ A ----
+/* ---- KADO BYENVENI (50 G — bilten ak dokiman sèlman) + MESAJ OTOMATIK SOTI NAN PWOPRIYETÈ A ----
    Chak nouvo kont admin (kreye depi mwens pase 3 jou) resevwa YON SÈL fwa
-   25 G kado. Kado a ekri nan wallets/{uid}/credits/welcome (kle fiks = li pa
+   50 G kado (sèvi sèlman pou bilten ak dokiman). Kado a ekri nan wallets/{uid}/credits/welcome (kle fiks = li pa
    ka double). Mesaj byenveni an parèt nan Messages (konvèsasyon "Meda"). */
-const WELCOME_GIFT = 25;
+const WELCOME_GIFT = 50;
+const GIFT_KINDS = ['doc','doctype','bulletin'];   /* kado byenveni an sèvi SÈLMAN pou bilten ak dokiman */
 const WELCOME_TXID = 'BYENVENI-AUTO';
 const WELCOME_MAX_AGE_MS = 3*86400000;
 async function walletMaybeClaimWelcome(){
@@ -4865,11 +4883,11 @@ async function ownerAutoWelcome(list){
     if(!isOwner() || !fbDb) return;
     const me = fbAuth.currentUser;
     for(const r of list){
-      if(r.id!=='welcome' || r.status!=='pending' || r.txid!==WELCOME_TXID || Number(r.amount)!==WELCOME_GIFT) continue;
+      if(r.id!=='welcome' || r.status!=='pending' || r.txid!==WELCOME_TXID || ![25,WELCOME_GIFT].includes(Number(r.amount))) continue;
       if(r.uid===me.uid || _welcomeBusy[r.uid]) continue;
       _welcomeBusy[r.uid] = true;
       const up = {};
-      up['wallets/'+r.uid+'/credits/welcome'] = { amount:WELCOME_GIFT, ts:serverTs(), by:me.uid, req:'welcome', kind:'welcome' };
+      up['wallets/'+r.uid+'/credits/welcome'] = { amount:Number(r.amount), ts:serverTs(), by:me.uid, req:'welcome', kind:'welcome' };
       up['paymentRequests/'+r.uid+'/welcome/status'] = 'verified';
       up['paymentRequests/'+r.uid+'/welcome/verifiedAt'] = serverTs();
       try{ await withTimeout(fbDb.ref().update(up), 9000); }
@@ -4887,7 +4905,58 @@ function medaWelcomeThread(){
   const me = currentAdmin() || {};
   const w = WALLET.welcome || { ts:Date.now(), amount:WELCOME_GIFT };
   const av = { photo:null, label:'Meda', color:'#1877F2' };
-  const txt = 'Bonjou '+(me.name||'')+' ! 👋\n\nByenveni sou Meda. Nou kontan wè w rejwenn nou.\n\nPou swete w byenveni, nou ofri w '+fmtG(w.amount)+' G kado — yo deja ajoute sou balans ou. Ou ka sèvi ak yo pou modèl, estil ak dokiman premium.\n\nSi w bezwen nenpòt èd, ale nan Èd & Sipò epi ekri nou.\n\nMèsi pou konfyans ou, epi bon travay ! 🎓\n— Ekip Meda';
+  const nm = me.name ? ' '+me.name : '';
+  const gift = fmtG(w.amount), vip = fmtG(PRICES.vipMonth), c1 = fmtG(PRICES.color);
+  const txtKr = [
+    '🇭🇹 Kreyòl',
+    '',
+    'Bonjou'+nm+' ! 👋',
+    'Byenveni sou Meda. Nou kontan wè w rejwenn nou.',
+    '',
+    '🎁 Kado byenveni : '+gift+' G, deja sou balans ou.',
+    'Li sèvi SÈLMAN pou bilten ak dokiman (estil bilten premium, modèl dokiman premium, dokiman ofisyèl).',
+    '',
+    '✨ Sa w ka fè :',
+    '• Jere klas, elèv, matyè, nòt ak fich elèv',
+    '• Fè epi enprime bilten, palmarè, orè ak dokiman ofisyèl',
+    '• Nouvo estil enprime Ofisyèl ak Egzekitif (gratis)',
+    '• Chanje koulè app la : 3 gratis, lòt yo '+c1+' G (yon sèl fwa, pou tout tan)',
+    '• Ekri pwofesè yo nan Messages',
+    '',
+    '👑 Pas VIP — '+vip+' G pou 1 mwa :',
+    '• Badj verifye (ble) bò kote non w',
+    '• Tout fonksyon ak koulè premium gratis pandan mwa a',
+    '• Li peye ak lajan ou ajoute, pa ak kado a',
+    '',
+    'Ajoute lajan : Balans & Peman. Èd : Èd & Sipò.',
+    'Mèsi pou konfyans ou ! 🎓',
+    '— Ekip Meda'
+  ].join('\n');
+  const txtFr = [
+    '🇫🇷 Français',
+    '',
+    'Bonjour'+nm+' ! 👋',
+    'Bienvenue sur Meda. Nous sommes ravis de vous compter parmi nous.',
+    '',
+    '🎁 Cadeau de bienvenue : '+gift+' G, déjà sur votre solde.',
+    'Il sert UNIQUEMENT aux bulletins et aux documents (styles de bulletin premium, modèles de documents premium, documents officiels).',
+    '',
+    '✨ Ce que vous pouvez faire :',
+    '• Gérer classes, élèves, matières, notes et fiches élèves',
+    '• Créer et imprimer bulletins, palmarès, horaires et documents officiels',
+    '• Nouveaux styles d’impression Officiel et Exécutif (gratuits)',
+    '• Changer les couleurs de l’app : 3 gratuites, les autres '+c1+' G (achat unique, à vie)',
+    '• Écrire aux professeurs dans Messages',
+    '',
+    '👑 Pass VIP — '+vip+' G pour 1 mois :',
+    '• Badge vérifié (bleu) à côté de votre nom',
+    '• Toutes les fonctions et couleurs premium gratuites pendant le mois',
+    '• Il se paie avec l’argent ajouté, pas avec le cadeau',
+    '',
+    'Ajouter de l’argent : Balans & Peman. Aide : Èd & Sipò.',
+    'Merci de votre confiance ! 🎓',
+    '— L’équipe Meda'
+  ].join('\n');
   return `
   ${window.innerWidth<=900?`<a class="msg-back" data-msg-back="1">${ICONS.back}Tounen</a>`:''}
   <div class="msg-thread-head">
@@ -4898,10 +4967,10 @@ function medaWelcomeThread(){
   </div>
   <div class="msg-bubbles" id="msg-bubbles">
     <div class="msg-day-sep"><span>${escapeHtml(fmtDayLabel(w.ts))}</span></div>
-    <div class="msg-row">
+    ${[txtKr, txtFr].map(t=>`<div class="msg-row">
       ${msgRowAvatarHtml(av)}
-      <div class="msg-bubble theirs" style="white-space:pre-wrap">${escapeHtml(txt)}<span class="meta">Meda${verifiedBadgeHtml()} · ${fmtTimeOnly(w.ts)}</span></div>
-    </div>
+      <div class="msg-bubble theirs" style="white-space:pre-wrap">${escapeHtml(t)}<span class="meta">Meda${verifiedBadgeHtml()} · ${fmtTimeOnly(w.ts)}</span></div>
+    </div>`).join('')}
   </div>
   <div class="hint" style="text-align:center;padding:10px">Mesaj otomatik — pa gen repons posib. Pou kontakte nou, itilize Èd & Sipò.</div>`;
 }
@@ -4947,6 +5016,14 @@ async function walletSpend(kind, amount){
   const ref = fbDb.ref('wallets/'+WALLET.uid+'/spends').push();
   await withTimeout(ref.set({ kind, amount, ts: serverTs() }), 9000);
 }
+function walletCash(){ return Math.max(0, Math.round((WALLET.balance - (WALLET.giftLeft||0))*100)/100); }
+function walletAfford(needs){
+  const el = needs.filter(n=>GIFT_KINDS.indexOf(n.kind)>=0).reduce((a,n)=>a+n.amount,0);
+  const total = needs.reduce((a,n)=>a+n.amount,0);
+  const giftAfter = Math.max(0, (WALLET.giftLeft||0) - el);
+  const remaining = WALLET.balance - total;
+  return { ok: remaining >= giftAfter - 1e-9, total, giftBlocked: (WALLET.balance >= total && remaining < giftAfter), missing: Math.max(0, Math.round((total + giftAfter - WALLET.balance)*100)/100) };
+}
 function paidNeeds(o){
   const needs=[];
   if(walletVipActive()) return needs; /* manm VIP — tout fonksyon premium gratis pandan mwa a */
@@ -4990,8 +5067,10 @@ async function ensurePaid(o){
   if(!needs.length) return true;
   const total = needs.reduce((a,n)=>a+n.amount, 0);
   const lines = needs.map(n=>'• '+n.label+' : '+fmtG(n.amount)+' G').join('\n');
-  if(WALLET.balance < total){
-    const go = await showConfirm('Fonksyon sa a peye.\n\n'+lines+'\nTotal : '+fmtG(total)+' G\nBalans ou : '+fmtG(WALLET.balance)+' G\n\nPou ajoute lajan, voye l sou NatCash '+NATCASH_DISPLAY+' epi soumèt kòd tranzaksyon an. Ale sou paj peman an?', {okLabel:'Ajoute lajan', title:'Balans ensifizan'});
+  const aff = walletAfford(needs);
+  if(!aff.ok){
+    const giftNote = aff.giftBlocked ? '\n\nKado byenveni ou ('+fmtG(WALLET.giftLeft)+' G rete) sèvi sèlman pou bilten ak dokiman. Ou bezwen ajoute '+fmtG(aff.missing)+' G pou fonksyon sa a.' : '';
+    const go = await showConfirm('Fonksyon sa a peye.\n\n'+lines+'\nTotal : '+fmtG(total)+' G\nBalans ou : '+fmtG(WALLET.balance)+' G'+giftNote+'\n\nPou ajoute lajan, voye l sou NatCash '+NATCASH_DISPLAY+' epi soumèt kòd tranzaksyon an. Ale sou paj peman an?', {okLabel:'Ajoute lajan', title:'Balans ensifizan'});
     if(go){ ui.adminView='wal'; ui.walOwner=false; render('admin'); }
     return false;
   }
@@ -5080,6 +5159,7 @@ function adminWallet(me){
     <div class="card-head"><span class="ic-wrap">${ICONS.wallet}</span><h3>Balans ou</h3></div>
     <div class="wal-balance">${balText}</div>
     ${owner ? '<div class="wal-sub">Ou pa peye pou fonksyon yo.</div>' : ''}
+    ${(!owner && WALLET.giftLeft>0) ? '<div class="wal-sub">🎁 Kado byenveni : <b>'+fmtG(WALLET.giftLeft)+' G</b> rete — sèlman pou bilten ak dokiman. Balans pou rès fonksyon yo : <b>'+fmtG(walletCash())+' G</b>.</div>' : ''}
     ${passLine}
     ${errLine}
   </div>
@@ -5319,6 +5399,44 @@ function helpBuildMail(me, f){
   ];
   const body = lines.join('\n');
   return { subject, body, url: 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) };
+}
+/* ---- Kòd bliye : demann voye bay sipò Meda pa imèl (menm jan ak paj Èd & Sipò) ---- */
+function recoveryBuildMail(email, role){
+  const kalite = role==='teacher' ? 'Pwofesè' : 'Administratè';
+  const subject = '[Meda] Kòd sekrè bliye — ' + (email || kalite);
+  const now = new Date();
+  const dat = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+  const ler = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  const lines = [
+    (now.getHours() >= 18 ? 'Bonswa' : 'Bonjou') + ' ekip sipò Meda,', '',
+    'Mwen bliye kòd sekrè m pou antre nan Meda epi mwen bezwen èd pou m chwazi yon nouvo.', '',
+    'ENFÒMASYON KONT LAN',
+    '----------------------------------------',
+    'Kalite kont : ' + kalite,
+    'Imèl kont : ' + (email || '(pa ekri)'),
+    'Non konplè : ____________ (tanpri ranpli)',
+    'Non lekòl la : ____________ (tanpri ranpli)',
+    'Telefòn : ____________ (tanpri ranpli)',
+    'Vèsyon app : v' + APP_VERSION,
+    'Dat ak lè : ' + dat + ' a ' + ler,
+    'Aparèy : ' + String(navigator.userAgent || '').slice(0,120), '',
+    'Pou sekirite, tanpri verifye idantite m anvan nou reyinisyalize kòd la. M konnen m pa dwe janm voye kòd sekrè m nan imèl.', '',
+    'Mèsi anpil pou èd ou.', '',
+    'Avèk respè,'
+  ];
+  const body = lines.join('\n');
+  return { subject, body, url: 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) };
+}
+async function forgotCodeFlow(role){
+  const go = await showConfirm('Ou bliye kòd sekrè w? Voye yon demann bay sipò Meda pa imèl. Nou verifye idantite w epi nou ede w chwazi yon nouvo kòd.\n\nImèl sipò : '+SUPPORT_EMAIL+'\n\nPeze « Ouvri imèl » pou app imèl telefòn ou louvri ak mesaj la deja ekri.', {okLabel:'Ouvri imèl', title:'Kòd bliye'});
+  if(!go) return;
+  const pre = (document.getElementById(role==='teacher' ? 'tl-email' : 'l-email') || {}).value || '';
+  const email = await showPrompt('Ekri imèl kont ou a (sa w itilize pou antre):', pre);
+  if(email === null || email === undefined) return;
+  const mail = recoveryBuildMail(String(email).trim(), role);
+  try{ helpCopyText(mail.body); }catch(e){}
+  window.location.href = mail.url;
+  setTimeout(()=>{ showAlert('Si app imèl la pa louvri, mesaj la kopye. Kole l nan yon imèl epi voye l bay '+SUPPORT_EMAIL+'.'); }, 1200);
 }
 async function helpCopyText(text){
   try{ if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); return true; } }catch(e){}
@@ -7730,18 +7848,9 @@ function wireEvents(view){
     });
 
     const forgotLink = document.getElementById('forgot-pass-link');
-    if(forgotLink) forgotLink.addEventListener('click', async e=>{
-      e.preventDefault();
-      if(!FIREBASE_ENABLED || !fbAuth){ await showAlert(FIREBASE_INIT_ERROR || 'Firebase pa konfigire.'); return; }
-      const email = await showPrompt('Ekri imèl kont administratè ou a. N ap voye yon lyen pou chwazi yon nouvo kòd sekrè:');
-      if(!email || !email.trim()) return;
-      try{
-        await fbAuth.sendPasswordResetEmail(email.trim());
-        await showAlert('Yon imèl voye bay '+email.trim()+' ak yon lyen pou chwazi yon nouvo kòd sekrè (verifye Spam si w pa wè l — sit rekiperasyon an ap rele l "modpas", se menm bagay ak kòd sekrè a).');
-      }catch(err){
-        await showAlert(firebaseAuthErrorMessage(err));
-      }
-    });
+    if(forgotLink) forgotLink.addEventListener('click', e=>{ e.preventDefault(); forgotCodeFlow('admin'); });
+    const forgotLinkT = document.getElementById('forgot-pass-link-t');
+    if(forgotLinkT) forgotLinkT.addEventListener('click', e=>{ e.preventDefault(); forgotCodeFlow('teacher'); });
 
     const tf = document.getElementById('login-teacher-form');
     if(tf) tf.addEventListener('submit', async e=>{
@@ -7852,14 +7961,11 @@ function wireEvents(view){
         render('admin');
       }));
       const tpd = document.getElementById('term-picker-dash');
-      if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; ui.dashAvgKeepOpen = true; render('admin'); });
-      /* Kat "Mwayèn jeneral" (0) ak "Evolisyon pa trimès" (1) rete louvri pa
-         default — se yo ki gen grafik ladan yo. Rès kat yo (Pi bon elèv,
-         Elèv pou swiv, Apèsi rapid, Klas yo) rete pliye. Grafik yo an SVG
-         senp (pa gen bibliyotèk ekstèn), kidonk yo parèt kòrèkteman kit yo
-         kache kit yo vizib. */
-      setupAccordion(document.querySelector('.fb-main'), ui.dashAvgKeepOpen ? [0,1] : [1]);
-      ui.dashAvgKeepOpen = false;   /* Mwayèn jeneral la pliye pa default; li rete louvri sèlman si w jis chanje trimès la */
+      if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
+      /* Okenn kat pa louvri poukont li : se itilizatè a ki depliye sa l bezwen.
+         Done yo rete nan paj la (yo jis kache), kidonk yo pa pèdi. Grafik yo
+         an SVG senp, kidonk yo parèt kòrèkteman lè w louvri yo. */
+      setupAccordion(document.querySelector('.fb-main'), [], 'akey');   /* tout kat yo pliye pa default; se itilizatè a ki louvri yo, e eta a rete menm apre yon re-rann */
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
