@@ -1210,7 +1210,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.33';
+const APP_VERSION = '2.26.10.34';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -4908,8 +4908,6 @@ function medaWelcomeThread(){
   const nm = me.name ? ' '+me.name : '';
   const gift = fmtG(w.amount), vip = fmtG(PRICES.vipMonth), c1 = fmtG(PRICES.color);
   const txtKr = [
-    '🇭🇹 Kreyòl',
-    '',
     'Bonjou'+nm+' ! 👋',
     'Byenveni sou Meda. Nou kontan wè w rejwenn nou.',
     '',
@@ -4932,31 +4930,6 @@ function medaWelcomeThread(){
     'Mèsi pou konfyans ou ! 🎓',
     '— Ekip Meda'
   ].join('\n');
-  const txtFr = [
-    '🇫🇷 Français',
-    '',
-    'Bonjour'+nm+' ! 👋',
-    'Bienvenue sur Meda. Nous sommes ravis de vous compter parmi nous.',
-    '',
-    '🎁 Cadeau de bienvenue : '+gift+' G, déjà sur votre solde.',
-    'Il sert UNIQUEMENT aux bulletins et aux documents (styles de bulletin premium, modèles de documents premium, documents officiels).',
-    '',
-    '✨ Ce que vous pouvez faire :',
-    '• Gérer classes, élèves, matières, notes et fiches élèves',
-    '• Créer et imprimer bulletins, palmarès, horaires et documents officiels',
-    '• Nouveaux styles d’impression Officiel et Exécutif (gratuits)',
-    '• Changer les couleurs de l’app : 3 gratuites, les autres '+c1+' G (achat unique, à vie)',
-    '• Écrire aux professeurs dans Messages',
-    '',
-    '👑 Pass VIP — '+vip+' G pour 1 mois :',
-    '• Badge vérifié (bleu) à côté de votre nom',
-    '• Toutes les fonctions et couleurs premium gratuites pendant le mois',
-    '• Il se paie avec l’argent ajouté, pas avec le cadeau',
-    '',
-    'Ajouter de l’argent : Balans & Peman. Aide : Èd & Sipò.',
-    'Merci de votre confiance ! 🎓',
-    '— L’équipe Meda'
-  ].join('\n');
   return `
   ${window.innerWidth<=900?`<a class="msg-back" data-msg-back="1">${ICONS.back}Tounen</a>`:''}
   <div class="msg-thread-head">
@@ -4967,7 +4940,7 @@ function medaWelcomeThread(){
   </div>
   <div class="msg-bubbles" id="msg-bubbles">
     <div class="msg-day-sep"><span>${escapeHtml(fmtDayLabel(w.ts))}</span></div>
-    ${[txtKr, txtFr].map(t=>`<div class="msg-row">
+    ${[txtKr].map(t=>`<div class="msg-row">
       ${msgRowAvatarHtml(av)}
       <div class="msg-bubble theirs" style="white-space:pre-wrap">${escapeHtml(t)}<span class="meta">Meda${verifiedBadgeHtml()} · ${fmtTimeOnly(w.ts)}</span></div>
     </div>`).join('')}
@@ -5400,7 +5373,7 @@ function helpBuildMail(me, f){
   const body = lines.join('\n');
   return { subject, body, url: 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) };
 }
-/* ---- Kòd bliye : demann voye bay sipò Meda pa imèl (menm jan ak paj Èd & Sipò) ---- */
+/* ---- Kòd bliye (repli manyèl) : demann voye bay sipò Meda pa imèl, itilize sèlman si Firebase pa disponib ---- */
 function recoveryBuildMail(email, role){
   const kalite = role==='teacher' ? 'Pwofesè' : 'Administratè';
   const subject = '[Meda] Kòd sekrè bliye — ' + (email || kalite);
@@ -5428,6 +5401,31 @@ function recoveryBuildMail(email, role){
   return { subject, body, url: 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) };
 }
 async function forgotCodeFlow(role){
+  /* Kòd bliye — OTOMATIK : Firebase voye yon lyen pa imèl pou chwazi yon nouvo kòd. */
+  if(!(FIREBASE_ENABLED && fbAuth)){ return forgotCodeManual(role); }
+  const pre = (document.getElementById(role==='teacher' ? 'tl-email' : 'l-email') || {}).value || '';
+  const email = await showPrompt('Ekri imèl kont ou a (sa w itilize pou antre). Nou voye yon lyen pou w chwazi yon nouvo kòd :', pre);
+  if(email === null || email === undefined) return;
+  const em = String(email).trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ await showAlert('Imèl la pa valid. Verifye l epi eseye ankò.'); return; }
+  if(!navigator.onLine){ await showAlert('Ou bezwen entènèt pou w resevwa lyen an.'); return; }
+  try{
+    try{ fbAuth.languageCode = 'fr'; }catch(e){}
+    await withTimeout(fbAuth.sendPasswordResetEmail(em), 15000);
+    await showAlert('Si imèl sa a gen yon kont sou Meda, yon lyen pou chwazi yon nouvo kòd sot voye ba li.\n\nTcheke bwat resepsyon an epi gade nan Spam tou si w pa wè l nan kèk minit.');
+  }catch(e){
+    const c = (e && e.code) || '';
+    if(c==='auth/invalid-email') await showAlert('Imèl la pa valid. Verifye l epi eseye ankò.');
+    else if(c==='auth/too-many-requests') await showAlert('Twòp demann. Tann kèk minit epi eseye ankò.');
+    else if(c==='auth/network-request-failed') await showAlert('Pa gen koneksyon ak sèvè a. Verifye entènèt ou epi eseye ankò.');
+    else if(c==='auth/user-not-found') await showAlert('Si imèl sa a gen yon kont sou Meda, yon lyen pou chwazi yon nouvo kòd sot voye ba li.');
+    else {
+      const go = await showConfirm('Lyen an pa t kapab voye otomatikman ('+((e && e.message)||'erè')+'). Ou vle voye yon demann bay sipò Meda pa imèl?', {okLabel:'Ouvri imèl'});
+      if(go) return forgotCodeManual(role);
+    }
+  }
+}
+async function forgotCodeManual(role){
   const go = await showConfirm('Ou bliye kòd sekrè w? Voye yon demann bay sipò Meda pa imèl. Nou verifye idantite w epi nou ede w chwazi yon nouvo kòd.\n\nImèl sipò : '+SUPPORT_EMAIL+'\n\nPeze « Ouvri imèl » pou app imèl telefòn ou louvri ak mesaj la deja ekri.', {okLabel:'Ouvri imèl', title:'Kòd bliye'});
   if(!go) return;
   const pre = (document.getElementById(role==='teacher' ? 'tl-email' : 'l-email') || {}).value || '';
