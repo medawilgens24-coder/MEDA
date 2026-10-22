@@ -1027,6 +1027,7 @@
   .uc-chip.on{border-color:var(--blue);background:var(--blue-soft);}
   .uc-badge{font-size:10.5px;font-weight:700;color:#8a5a00;background:#FBF1DD;border-radius:999px;padding:2px 7px;white-space:nowrap;}
   .uc-badge[hidden]{display:none;}
+  .uc-badge.ok{background:#E8F8E3;color:#1B7A2E;}
   .uc-sw{width:38px;height:38px;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.22);}
   .uc-pick-row{display:flex;gap:18px;flex-wrap:wrap;}
   .uc-pick-row label{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text);}
@@ -1209,7 +1210,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.28';
+const APP_VERSION = '2.26.10.29';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2225,14 +2226,14 @@ async function loadUserColors(){
 (function(){ try{ const v = localStorage.getItem('userColors'); if(v) Object.assign(USER_COLORS, JSON.parse(v)); }catch(e){} applyUserColors(); })();
 function colorSettingsHtml(){
   const c = USER_COLORS;
-  const chips = COLOR_PRESETS.map(x=>`<button type="button" class="uc-chip ${c.preset===x.id?'on':''}" data-uc-preset="${x.id}" title="${x.label}"><span class="uc-sw" style="background:linear-gradient(135deg,${x.p},${x.a})"></span><span class="uc-nm">${x.label}</span><span class="uc-badge" data-uc-badge="${x.id}" ${(x.premium && !ucCanUse(x.id))?'':'hidden'}>🔒 ${fmtG(PRICES.color)} G</span></button>`).join('');
+  const chips = COLOR_PRESETS.map(x=>`<button type="button" class="uc-chip ${c.preset===x.id?'on':''}" data-uc-preset="${x.id}" title="${x.label}"><span class="uc-sw" style="background:linear-gradient(135deg,${x.p},${x.a})"></span><span class="uc-nm">${x.label}</span><span class="uc-badge ${ucBadge(x.id)[1]}" data-uc-badge="${x.id}" ${ucBadge(x.id)[0]?'':'hidden'}>${ucBadge(x.id)[0]}</span></button>`).join('');
   return `<div class="uc-box">
     <div><div class="ttxt">Koulè aplikasyon an</div><div class="tsub">Chwazi yon koulè oswa mete pa w. Koulè ki gen 🔒 peye yon sèl fwa epi ou kenbe yo pou tout tan. Aplike sèlman sou aparèy sa a.</div></div>
     <div class="uc-chips">${chips}</div>
     <div class="uc-pick-row" data-uc-custom>
       <label>Koulè prensipal<input type="color" data-uc-pick="primary" value="${ucHex(c.primary)||'#1877F2'}"></label>
       <label>Koulè segondè<input type="color" data-uc-pick="accent" value="${ucHex(c.accent)||'#C79A3B'}"></label>
-      <span class="uc-badge" data-uc-badge="custom" ${ucCanUse('custom')?'hidden':''}>🔒 Koulè pèsonèl ${fmtG(PRICES.colorCustom)} G</span>
+      <span class="uc-badge ${ucBadge('custom')[1]}" data-uc-badge="custom">${ucBadge('custom')[0]}</span>
     </div>
     <div class="uc-row"><div><div class="ttxt">Dekorasyon kolore</div><div class="tsub">Bann degrade anlè paj yo, ikòn ak kat kolore.</div></div>
       <label class="switch"><input type="checkbox" data-uc-colorful ${c.colorful!==false?'checked':''}><span class="slider"></span></label></div>
@@ -2241,6 +2242,14 @@ function colorSettingsHtml(){
 }
 function ucIsPremium(id){ if(id==='custom') return true; const x = COLOR_PRESETS.find(z=>z.id===id); return !!(x && x.premium); }
 function ucPriceOf(id){ return id==='custom' ? PRICES.colorCustom : PRICES.color; }
+function ucBadge(id){
+  if(!ucIsPremium(id)) return ['',''];
+  let who = '';
+  try{ if(isOwner()) who = 'Pwopriyetè'; else if(walletVipActive()) who = 'VIP'; }catch(e){}
+  if(who) return ['🔓 '+who, 'ok'];
+  if(WALLET.colors && WALLET.colors[id]) return ['✓ Achte', 'ok'];
+  return [id==='custom' ? '🔒 Koulè pèsonèl '+fmtG(PRICES.colorCustom)+' G' : '🔒 '+fmtG(PRICES.color)+' G', 'lock'];
+}
 function ucCanUse(id){
   if(!ucIsPremium(id)) return true;
   try{ if(isOwner() || walletVipActive()) return true; }catch(e){}
@@ -2248,7 +2257,7 @@ function ucCanUse(id){
 }
 function ucSyncUi(){
   document.querySelectorAll('.uc-chip').forEach(b=>b.classList.toggle('on', b.dataset.ucPreset===USER_COLORS.preset));
-  document.querySelectorAll('[data-uc-badge]').forEach(el=>{ el.hidden = ucCanUse(el.dataset.ucBadge); });
+  document.querySelectorAll('[data-uc-badge]').forEach(el=>{ const b = ucBadge(el.dataset.ucBadge); el.textContent = b[0]; el.className = 'uc-badge '+b[1]; el.hidden = !b[0]; });
   document.querySelectorAll('[data-uc-pick]').forEach(i=>{ const v = ucHex(USER_COLORS[i.dataset.ucPick]); if(v) i.value = v; });
   document.querySelectorAll('[data-uc-colorful]').forEach(i=>{ i.checked = USER_COLORS.colorful !== false; });
 }
@@ -3979,9 +3988,8 @@ function adminHome(me){
     <div class="stat-box sb-gold"><div class="stat-ic">${ICONS.idcard}</div><div class="num">${(DATA.admins||[]).length}</div><div class="lbl">Kont administratè</div></div>
   </div>
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px">
-      <div class="card-head" style="margin:0"><span class="ic-wrap">${ICONS.chart}</span><h3>Mwayèn jeneral — ${escapeHtml(term)}</h3></div>
-      <select class="term-select" id="term-picker-dash">
+    <div class="card-head"><span class="ic-wrap">${ICONS.chart}</span><h3>Mwayèn jeneral — ${escapeHtml(term)}</h3>
+      <select class="term-select" id="term-picker-dash" onclick="event.stopPropagation()">
         ${DATA.terms.map(t=>`<option value="${escapeHtml(t)}" ${t===term?'selected':''}>${escapeHtml(t)}</option>`).join('')}
       </select>
     </div>
@@ -7844,13 +7852,14 @@ function wireEvents(view){
         render('admin');
       }));
       const tpd = document.getElementById('term-picker-dash');
-      if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; render('admin'); });
+      if(tpd) tpd.addEventListener('change', ()=>{ ui.term = tpd.value; ui.dashAvgKeepOpen = true; render('admin'); });
       /* Kat "Mwayèn jeneral" (0) ak "Evolisyon pa trimès" (1) rete louvri pa
          default — se yo ki gen grafik ladan yo. Rès kat yo (Pi bon elèv,
          Elèv pou swiv, Apèsi rapid, Klas yo) rete pliye. Grafik yo an SVG
          senp (pa gen bibliyotèk ekstèn), kidonk yo parèt kòrèkteman kit yo
          kache kit yo vizib. */
-      setupAccordion(document.querySelector('.fb-main'), [0,1]);
+      setupAccordion(document.querySelector('.fb-main'), ui.dashAvgKeepOpen ? [0,1] : [1]);
+      ui.dashAvgKeepOpen = false;   /* Mwayèn jeneral la pliye pa default; li rete louvri sèlman si w jis chanje trimès la */
     }
     if(ui.adminView==='klas' && !ui.classDetailFor){
       const modeSel = document.getElementById('nc-teacher-mode');
