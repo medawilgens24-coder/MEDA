@@ -1275,7 +1275,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.48';
+const APP_VERSION = '2.26.10.50';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -4068,8 +4068,46 @@ async function boot(){
   }
   render(restored ? 'admin' : 'login');
 }
+/* Kenbe sa moun nan ap ekri (tèks, kurseur, fokis) ak pozisyon defilman mesaj yo lè paj la rann ankò —
+   konsa yon mizajou (nouvo mesaj, prezans, tik) pa janm efase oswa fè ekriti a sote. */
+function uiCaptureState(){
+  const st = { thread: ui.msgTeacherId || null };
+  try{
+    const a = document.activeElement;
+    if(a && a.id==='msg-compose-text'){   // sèlman bwat mesaj la : lòt fòm yo dwe ka vid apre yon soumèt
+      st.id = a.id; st.value = a.value;
+      try{ st.s = a.selectionStart; st.e = a.selectionEnd; }catch(e){}
+    }
+    const b = document.getElementById('msg-bubbles');
+    if(b){ st.bTop = b.scrollTop; st.bNear = (b.scrollHeight - b.scrollTop - b.clientHeight) < 80; }
+  }catch(e){}
+  return st;
+}
+function uiRestoreState(st){
+  try{
+    if(st.id){
+      const el = document.getElementById(st.id);
+      if(el && (st.id!=='msg-compose-text' || ui.msgTeacherId===st.thread)){
+        if(el.value!==st.value) el.value = st.value;
+        el.focus({preventScroll:true});
+        try{ if(st.s!=null) el.setSelectionRange(st.s, st.e); }catch(e){}
+      }
+    }
+    const b = document.getElementById('msg-bubbles');
+    if(b && st.bTop!==undefined && ui.msgTeacherId===st.thread) b.scrollTop = st.bNear ? b.scrollHeight : st.bTop;
+  }catch(e){}
+}
 function render(view){
+  try{ wsecSync(); }catch(e){}
   const app = document.getElementById('app');
+  if(view==='login' || view==='schoolgate'){ try{ wsecRevoke(); }catch(e){} }
+  if(view==='admin' && wsecNeedsEntry()){
+    /* Espas lajan an fèmen : afiche yon ekran bloke epi mande kòd la AVAN okenn done parèt */
+    app.innerHTML = wsecLockedHtml();
+    wsecEntryFlow();
+    return;
+  }
+  const _keep = (view==='admin' || view==='teacher') ? uiCaptureState() : null;
   if(view==='login') app.innerHTML = viewLogin();
   else if(view==='schoolgate') app.innerHTML = viewSchoolGate();
   else if(view==='admin') app.innerHTML = viewAdmin();
@@ -4086,6 +4124,7 @@ function render(view){
     decoratePreviewWatermark();
   }catch(e){ console.error('Balans/Peman', e); }
   try{ syncBackButtonTrap(view); }catch(e){ console.error('Bouton tounen', e); }
+  if(_keep) uiRestoreState(_keep);
 }
 
 /* ===================== Bouton/jès "tounen" telefòn lan =====================
@@ -4979,9 +5018,8 @@ function stopPresenceWatch(){
 }
 /* Swiv prezans moun ki nan lòt bò konvèsasyon an louvri a (yon sèl pwofesè
    pou admin; nenpòt nan kont administratè yo pou yon pwofesè). */
+let _presenceThreadKey = '';
 function wirePresenceForThread(teacherId, role, rerender){
-  _presenceThreadRefs.forEach(({ref,handler})=>{ try{ ref.off('value', handler); }catch(e){} });
-  _presenceThreadRefs = [];
   if(!FIREBASE_ENABLED || !fbDb) return;
   let uids = [];
   if(role==='admin'){
@@ -4990,10 +5028,22 @@ function wirePresenceForThread(teacherId, role, rerender){
   } else {
     uids = (DATA.admins||[]).map(a=>a.uid).filter(Boolean);
   }
+  /* Deja branche sou menm moun yo → pa rebranche (rebranche a te lakòz yon bouk : chak rann → rebranche →
+     evènman imedya → rann ankò → paj la t ap danse epi ekriti a pa t ka antre). */
+  const key = role+'|'+uids.join(',');
+  if(key===_presenceThreadKey && _presenceThreadRefs.length) return;
+  _presenceThreadRefs.forEach(({ref,handler})=>{ try{ ref.off('value', handler); }catch(e){} });
+  _presenceThreadRefs = [];
+  _presenceThreadKey = key;
   uids.forEach(uidVal=>{
     try{
       const ref = fbDb.ref('presence/'+uidVal);
-      const handler = snap=>{ PRESENCE_CACHE[uidVal] = snap.val()===true; rerender(); };
+      const handler = snap=>{
+        const nv = snap.val()===true;
+        const changed = PRESENCE_CACHE[uidVal] !== nv;
+        PRESENCE_CACHE[uidVal] = nv;
+        if(changed) rerender();   // rann sèlman si prezans lan chanje vre
+      };
       ref.on('value', handler);
       _presenceThreadRefs.push({ref, handler});
     }catch(e){}
@@ -5323,7 +5373,45 @@ const WSEC_QUESTIONS = [
   'Ki non pitit gason oswa pitit fi pi gran nan fanmi w la?',
   'Ki dènye 4 chif nimewo telefòn ki pi enpòtan pou ou a?'
 ];
-let _wsecOk = 0;
+/* Sesyon kòd sekrè a mare ak ESPAS la : li valab sèlman pandan itilizatè a rete nan paj lajan an
+   (Balans & Peman / Peman yo). Depi li kite espas la (lòt paj, app la an background, paj la fèmen,
+   dekonekte), kòd la mande ankò IMEDYATMAN. Pou yon depans ki fèt andeyò paj lajan an (egzanp
+   dokiman), kòd la valab sèlman ~10 segonn — ase pou fini aksyon an, pa plis. */
+let _wsecOk = null;   // { space, until }
+function wsecSpace(){ return (ui.adminView==='wal' || ui.adminView==='pwo') ? 'money' : String(ui.adminView||''); }
+function wsecGrant(){ _wsecOk = { space: wsecSpace(), until: Date.now() + (wsecSpace()==='money' ? 30*60000 : 10000) }; }
+function wsecValid(){ return !!(_wsecOk && Date.now() < _wsecOk.until && _wsecOk.space === wsecSpace() && document.visibilityState !== 'hidden'); }
+function wsecRevoke(){ _wsecOk = null; }
+function wsecNeedsEntry(){
+  try{
+    if(wsecSpace()!=='money' || ui.wsecMode==='recover') return false;
+    const rec = wsecRec();
+    return !!(rec && rec.walletSec && !wsecValid());
+  }catch(e){ return false; }
+}
+let _wsecEntryBusy = false;
+async function wsecEntryFlow(){
+  if(_wsecEntryBusy) return;
+  _wsecEntryBusy = true;
+  try{
+    const ok = await walletPinGate();
+    if(ok){ wsecGrant(); }
+    else if(ui.wsecMode!=='recover'){ ui.adminView = 'akey'; ui.walOwner = false; }
+  }finally{
+    _wsecEntryBusy = false;
+    render('admin');
+  }
+}
+function wsecLockedHtml(){
+  return `<div class="boot-loader"><div class="boot-loader-inner" style="gap:14px;text-align:center">
+    <div style="width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--g1),var(--g3));color:#fff;box-shadow:0 10px 24px rgba(var(--blue-rgb),.35)"><span style="width:32px;height:32px;display:block">${ICONS.key}</span></div>
+    <div style="font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;color:var(--text)">Paj lajan an pwoteje</div>
+    <div style="font-size:13.5px;color:var(--text-soft)">Antre kòd sekrè w pou kontinye.</div>
+  </div></div>`;
+}
+function wsecSync(){ if(_wsecOk && _wsecOk.space !== wsecSpace()) _wsecOk = null; }   // rele nan chak render : kite espas la = kòd la ale
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') wsecRevoke(); });
+window.addEventListener('pagehide', wsecRevoke);
 function wsecRec(){
   const me = currentAdmin();
   return (DATA.admins||[]).find(a=>a.username===me.username) || null;
@@ -5392,14 +5480,14 @@ function wsecAskPin(title){
 async function walletPinGate(){
   const rec = wsecRec();
   if(!rec || !rec.walletSec) return true;
-  if(Date.now() < _wsecOk) return true;
+  if(wsecValid()) return true;
   for(;;){
     const lm = wsecLockedSec();
     if(lm){ await showAlert(wsecLockMsg(lm)); return false; }
     const v = await wsecAskPin('Kòd sekrè');
     if(v===null) return false;
     if(v==='\u0000forgot'){ ui.adminView='wal'; ui.wsecMode='recover'; render('admin'); return false; }
-    if(await wsecCheckPin(rec, v.trim())){ wsecReset(); _wsecOk = Date.now()+5*60000; return true; }
+    if(await wsecCheckPin(rec, v.trim())){ wsecReset(); wsecGrant(); return true; }
     wsecFail();
     await showAlert('Kòd la pa bon.', {icon:'warn'});
   }
@@ -5475,7 +5563,7 @@ function wireWalletSecurity(){
     const qs = [];
     for(let i=0;i<3;i++) qs.push({q:qi[i], a: await wsecHash(ans[i], salt+':'+i)});
     rec.walletSec = { salt, pin: await wsecHash(p, salt), qs, at: Date.now() };
-    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await saveData(); wsecGrant(); ui.wsecMode='';
     await showAlert('Kòd sekrè a aktive.'); render('admin');
   });
   const ch = document.getElementById('wsec-change-form');
@@ -5488,7 +5576,7 @@ function wireWalletSecurity(){
     const p = await checkNew(); if(!p) return;
     rec.walletSec.pin = await wsecHash(p, rec.walletSec.salt);
     rec.walletSec.at = Date.now();
-    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await saveData(); wsecGrant(); ui.wsecMode='';
     await showAlert('Kòd la chanje.'); render('admin');
   });
   const rc = document.getElementById('wsec-recover-form');
@@ -5506,13 +5594,13 @@ function wireWalletSecurity(){
     const p = await checkNew(); if(!p) return;
     rec.walletSec.pin = await wsecHash(p, rec.walletSec.salt);
     rec.walletSec.at = Date.now();
-    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await saveData(); wsecGrant(); ui.wsecMode='';
     await showAlert('Nouvo kòd la anrejistre.'); render('admin');
   });
 }
 
 async function walletSpend(kind, amount){
-  if(!isOwner() && !await walletPinGate()) throw new Error('Kòd sekrè a pa konfime');
+  if(!await walletPinGate()) throw new Error('Kòd sekrè a pa konfime');   /* pwopriyetè a tou */
   const ref = fbDb.ref('wallets/'+WALLET.uid+'/spends').push();
   await withTimeout(ref.set({ kind, amount, ts: serverTs() }), 9000);
 }
@@ -8927,6 +9015,7 @@ function wireEvents(view){
         e.preventDefault();
         const ta = document.getElementById('msg-compose-text');
         const text = ta.value.trim();
+        ta.value = '';
         const photo = ui.msgComposePhoto || null;
         if(!text && !photo) return;
         const msg = {id:uid(), teacherId:ui.msgTeacherId, sender:'admin', senderUsername:currentAdmin().username, text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
@@ -9270,6 +9359,7 @@ function wireEvents(view){
         e.preventDefault();
         const ta = document.getElementById('msg-compose-text');
         const text = ta.value.trim();
+        ta.value = '';
         const photo = ui.msgComposePhoto || null;
         if(!text && !photo) return;
         const msg = {id:uid(), teacherId:teacher.id, sender:'teacher', text, photo, ts:Date.now(), read:false, delivered:false, editedAt:null, deletedFor:[], deletedForEveryone:false};
