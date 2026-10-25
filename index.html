@@ -1380,6 +1380,15 @@
   .wsec-rec-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
   .wsec-rec-card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 44px rgba(var(--blue-rgb),.14);padding:26px 22px 20px;text-align:center;}
   .wsec-rec-form{text-align:left;margin-top:4px;}
+  /* Menu aksyon mesaj : fèy flotan pwòp */
+  .msg-action-overlay{background:rgba(16,21,46,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);padding:0 10px calc(10px + env(safe-area-inset-bottom));}
+  .msg-action-sheet{background:transparent;max-width:420px;border-radius:0;padding:0;box-shadow:none;}
+  .msg-action-group{background:var(--card);border-radius:20px;overflow:hidden;box-shadow:0 14px 34px rgba(16,21,46,.30);}
+  .msg-action-btn{padding:16px 22px;font-size:15.5px;font-weight:600;border-bottom:1px solid var(--line-soft);transition:background .12s;}
+  .msg-action-btn:active{background:var(--blue-soft);}
+  .msg-action-btn.danger{color:var(--red);}
+  .msg-action-btn.cancel{margin-top:10px;background:var(--card);border-radius:20px;border:none;text-align:center;font-weight:700;color:var(--blue);padding:16px;box-shadow:0 10px 26px rgba(16,21,46,.24);}
+  .msg-action-group .msg-action-btn:last-child{border-bottom:none;}
 </style>
 </head>
 <body>
@@ -1418,7 +1427,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.59';
+const APP_VERSION = '2.26.10.60';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2097,7 +2106,7 @@ function renderMsgActionSheet(teacherId, role, teacher){
   const m = visibleMessagesFor(teacherId, role).find(x=>x.id===ui.msgActionFor);
   if(!m) return '';
   if(m.deletedForEveryone){
-    const btns = `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button>
+    const btns = `<div class="msg-action-group"><button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button></div>
     <button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Anile</button>`;
     return `<div class="msg-action-overlay" data-msg-action-close="1"><div class="msg-action-sheet" data-msg-sheet="1">${btns}</div></div>`;
   }
@@ -2110,11 +2119,12 @@ function renderMsgActionSheet(teacherId, role, teacher){
   } else {
     btns += `<button type="button" class="msg-action-btn" data-msg-delete-me="${m.id}">🗑️ Efase pou mwen sèlman</button>`;
   }
-  btns += `<button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Anile</button>`;
+  btns = `<div class="msg-action-group">${btns}</div><button type="button" class="msg-action-btn cancel" data-msg-action-close="1">Anile</button>`;
   return `<div class="msg-action-overlay" data-msg-action-close="1"><div class="msg-action-sheet" data-msg-sheet="1">${btns}</div></div>`;
 }
 /* Branche tout evenman popup/aksyon/edit pou yon konvèsasyon (itilize pou admin ak pwofesè) */
 function wireMessageThread(teacherId, role, rerender){
+  { const _re = rerender; rerender = ()=>{ ui._noSnap = true; _re(); }; }   /* seleksyon / aksyon sou mesaj : pa janm sote anba */
   wirePresenceForThread(teacherId, role, rerender);
   wireTypingForThread(teacherId, role);
   wireTypingInput(teacherId, role);
@@ -4398,6 +4408,8 @@ function uiCaptureState(){
       st.id = a.id; st.value = a.value;
       try{ st.s = a.selectionStart; st.e = a.selectionEnd; }catch(e){}
     }
+    st.wy = window.pageYOffset || (document.scrollingElement && document.scrollingElement.scrollTop) || 0;
+    st.noSnap = !!ui._noSnap; ui._noSnap = false;
     const b = document.getElementById('msg-bubbles');
     if(b){ st.bTop = b.scrollTop; st.bNear = (b.scrollHeight - b.scrollTop - b.clientHeight) < 80; }
   }catch(e){}
@@ -4414,7 +4426,11 @@ function uiRestoreState(st){
       }
     }
     const b = document.getElementById('msg-bubbles');
-    if(b && st.bTop!==undefined && ui.msgTeacherId===st.thread) b.scrollTop = st.bNear ? b.scrollHeight : st.bTop;
+    if(b && st.bTop!==undefined && ui.msgTeacherId===st.thread) b.scrollTop = (st.bNear && !st.noSnap) ? b.scrollHeight : st.bTop;
+    if(st.noSnap && st.wy!==undefined){
+      const back = ()=>{ try{ window.scrollTo(0, st.wy); }catch(e){} };
+      back(); requestAnimationFrame(back);
+    }
   }catch(e){}
 }
 function render(view){
