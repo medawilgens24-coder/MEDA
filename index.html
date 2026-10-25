@@ -42,7 +42,7 @@
 <meta http-equiv="Expires" content="0">
 <title>Meda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Playfair+Display:wght@600;700&family=Nunito:wght@500;700&family=Roboto+Condensed:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Playfair+Display:wght@600;700&family=Nunito:wght@500;600;700;800&family=Roboto+Condensed:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --blue:#1877F2;
@@ -104,6 +104,7 @@
   .conn-dot{position:fixed;top:10px;right:10px;width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:9999;transition:background-color .2s, border-color .2s;}
   .conn-dot.is-online{background:var(--green);border-color:var(--green);box-shadow:0 0 0 3px rgba(66,183,42,.25);}
   .conn-dot.is-offline{background:#fff;border-color:#bbb;}
+  .conn-dot.is-saving{background:#F5A623;border-color:#F5A623;box-shadow:0 0 0 3px rgba(245,166,35,.28);}
   .nav-badge{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1;}
   .nav-icon-btn{position:relative;}
   .sb-link{position:relative;}
@@ -1192,6 +1193,50 @@
   @keyframes meda-sub{0%,50%{opacity:0;transform:translateY(6px);}64%,88%{opacity:1;transform:none;}96%,100%{opacity:0;transform:none;}}
   @keyframes boot-spin{to{transform:rotate(360deg);}}   /* toujou itilize pa yon lòt ti chajman nan app la */
   @media (prefers-reduced-motion:reduce){ .meda-l,.meda-sub{animation:none;opacity:1;transform:none;} .meda-line{animation:none;transform:none;} }
+
+  /* ================= KARAKTÈ MEDA — pa sanble ak Facebook/Messenger ================= */
+  :root{--bg:#F3F5FB;--line:#E2E7F1;--line-soft:#EAEEF6;}
+  body{font-family:'Nunito','Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;}
+  /* Ba anlè : vit tranpan, liy degrade anba, non nan Fraunces, bouton kare awondi */
+  .fb-nav{height:60px;background:rgba(255,255,255,.80);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:none;box-shadow:0 8px 24px rgba(var(--blue-rgb),.07);}
+  .fb-nav::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--accent));}
+  html.theme-dark .fb-nav{background:rgba(30,31,32,.84);}
+  .fb-nav-left .bn{font-family:'Fraunces',Georgia,serif;font-size:17px;letter-spacing:-.01em;}
+  .fb-nav-left .logo{border-radius:12px;overflow:hidden;}
+  .icon-round-btn{border-radius:14px;background:rgba(var(--blue-rgb),.09);color:var(--blue);}
+  .icon-round-btn:hover{background:rgba(var(--blue-rgb),.16);}
+  .nav-avatar{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--g2);}
+  .fb-nav-mid .nav-icon-btn{border-radius:14px;}
+  .fb-nav-mid .nav-icon-btn.active{background:rgba(var(--blue-rgb),.10);}
+  .fb-nav-mid .nav-icon-btn.active::after{display:none;}
+  /* Meni kote */
+  .sb-card{border-radius:20px;border:1px solid rgba(var(--blue-rgb),.09);box-shadow:0 12px 30px rgba(var(--blue-rgb),.07);}
+  .sb-link{border-radius:14px;}
+  .sb-link .ic-wrap{border-radius:12px;}
+  .sb-profile .av{border-radius:14px;}
+  /* Kat yo */
+  .card{border-radius:20px;border:1px solid rgba(var(--blue-rgb),.09);box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 30px rgba(var(--blue-rgb),.07);}
+  html.theme-dark .card,html.theme-dark .sb-card{border-color:var(--line-soft);box-shadow:var(--shadow);}
+  .card-head .ic-wrap{width:34px;height:34px;border-radius:12px;}
+  .tab-btn{border-radius:12px;}
+  .tab-btn.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),.14),rgba(var(--g3-rgb),.14));box-shadow:inset 0 0 0 1px rgba(var(--blue-rgb),.28);}
+  .field input,.field select{border-radius:12px;}
+  /* Meni anba (mobil) : yon « dock » k ap flote, pa yon ba kole nan kwen yo */
+  @media (max-width:900px){
+    .fb-bottom-nav{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));padding:6px 4px;border:1px solid rgba(var(--blue-rgb),.14);border-radius:26px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 14px 34px rgba(var(--blue-rgb),.22),0 2px 6px rgba(0,0,0,.06);}
+    html.theme-dark .fb-bottom-nav{background:rgba(36,37,38,.92);border-color:rgba(255,255,255,.10);}
+    .fb-body{padding-bottom:108px;}
+    html:not([class*="navstyle-"]) .fb-bottom-nav .nav-icon-btn{border-radius:18px;height:50px;}
+    html:not([class*="navstyle-"]) .fb-bottom-nav .nav-icon-btn.active{background:linear-gradient(135deg,var(--g1),var(--g2) 55%,var(--g3));color:#fff;box-shadow:0 6px 14px rgba(var(--blue-rgb),.38);}
+    html:not([class*="navstyle-"]) .fb-bottom-nav .nav-icon-btn.active::after{display:none;}
+  }
+  /* Mesaj yo : fòm pa nou — pa gen bul Messenger. Pa nou = degrade ak kwen kare anba dwat ; lòt moun = kat blan ak bann aksan agòch */
+  .msg-bubble{padding:10px 14px;box-shadow:0 2px 8px rgba(var(--blue-rgb),.10);}
+  .msg-bubble.mine{background:linear-gradient(135deg,var(--g2),var(--g3));border-radius:18px 18px 4px 18px;}
+  .msg-bubble.theirs{background:var(--card);color:var(--text);border:1px solid rgba(var(--blue-rgb),.12);border-left:4px solid var(--accent);border-radius:6px 18px 18px 18px;}
+  .msg-bubble.photo-only.mine,.msg-bubble.photo-only.theirs{background:transparent;border:none;box-shadow:none;border-radius:15px;}
+  .msg-avatar{border-radius:14px;}
+  .msg-compose{border-radius:16px;border:1px solid rgba(var(--blue-rgb),.18);box-shadow:0 6px 18px rgba(var(--blue-rgb),.08);}
 </style>
 </head>
 <body>
@@ -1230,7 +1275,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.42';
+const APP_VERSION = '2.26.10.44';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2595,6 +2640,7 @@ async function switchToSchoolForUid(uidVal){
   DATA = loaded;
   normalizeLoadedData(DATA);
   if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+  _saveSnapInit();
   if(!DATA.avgScale) DATA.avgScale = 100;
   migrateAcademicYears();
   migrateTeacherProfiles();
@@ -2628,6 +2674,7 @@ async function switchToSchoolForTeacherUid(uidVal){
   DATA = loaded;
   normalizeLoadedData(DATA);
   if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+  _saveSnapInit();
   if(!DATA.avgScale) DATA.avgScale = 100;
   migrateAcademicYears();
   migrateTeacherProfiles();
@@ -2653,7 +2700,7 @@ function loadData(){ return loadDataAtPath(schoolDataRefPath()); }
 const _debounceTimers = new WeakMap();
 function debounceSave(el, fn, delay){
   clearTimeout(_debounceTimers.get(el));
-  const t = setTimeout(fn, delay||900);
+  const t = setTimeout(fn, delay===undefined ? 10 : delay);   /* default 10 ms — regl pou tout fonksyon */
   _debounceTimers.set(el, t);
 }
 /* Sovgad RAPID pou orè a sèlman: voye sèlman `schedule` la (pa tout DATA a ak foto yo,
@@ -2721,25 +2768,114 @@ async function gradeSaveNow(cls, term, studentId){
 function gradeFlushDirty(){ _gradeDirty.forEach(v=>gradeSaveNow(v.cls, v.term, v.studentId)); }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') gradeFlushDirty(); });
 window.addEventListener('pagehide', gradeFlushDirty);
-async function saveData(){
+/* =====================================================================
+   SOVGAD RAPID — REGL POU TOUT FONKSYON (ansyen ak nouvo)
+   • saveData() voye SÈLMAN sa ki chanje (diferans ant dènye eta sove a ak eta kounye a),
+     pa tout done lekòl la de fwa. Yon chanjman = kèk oktè, pa plizyè megaoktè.
+   • Plizyè sovgad ki rive ansanm kole nan yon sèl ekzekisyon (pa gen anpil sovgad ki chita youn sou lòt).
+   • Si sèvè a pa reponn nan 1,2 s, app la kontinye (rann paj la touswit) epi sovgad la fini dèyè ; pwen
+     koneksyon an vin zoranj pandan sovgad la ap fèt, wouj si li echwe.
+   • Pou nenpòt nouvo chan/fòm : modifye DATA dirèkteman (sa afiche touswit),
+     epi rele debounceSave(el, ()=>saveData(), 10)  — pa janm tann plis pase 10 ms.
+   ===================================================================== */
+const _SAVE = { ref:null, path:null, snap:null, msgJson:null, pending:0, seq:0, applied:0 };
+function _cloneShare(v){
+  if(v===null || typeof v!=='object') return v;
+  if(Array.isArray(v)){ const a = new Array(v.length); for(let i=0;i<v.length;i++) a[i] = _cloneShare(v[i]); return a; }
+  const o = {}; for(const k in v) o[k] = _cloneShare(v[k]); return o;
+}
+function _restOf(d){ const r = Object.assign({}, d); delete r.messages; delete r.typing; delete r.pushQueue; delete r.pushTokens; return r; }
+function _kindOf(v){ return (v===undefined || v===null) ? 'nil' : (Array.isArray(v) ? 'arr' : (typeof v==='object' ? 'obj' : 'prim')); }
+function _cleanVal(v){ return (v!==null && typeof v==='object') ? JSON.parse(JSON.stringify(v)) : v; }
+function _diffInto(prev, next, path, out){
+  if(prev===next) return;
+  const nt = _kindOf(next), pt = _kindOf(prev);
+  if(nt==='nil'){ if(pt!=='nil') out[path] = null; return; }
+  if(nt==='prim' || pt!==nt){
+    if(typeof next==='number' && !Number.isFinite(next)) { out[path] = null; return; }
+    out[path] = _cleanVal(next); return;
+  }
+  const keys = new Set(Object.keys(prev).concat(Object.keys(next)));
+  keys.forEach(k=>_diffInto(prev[k], next[k], path ? path+'/'+k : k, out));
+}
+function _saveSnapInit(){
+  try{
+    if(!(FIREBASE_ENABLED && fbDb) || !DATA) return;
+    _SAVE.ref = DATA; _SAVE.path = schoolDataRefPath();
+    _SAVE.snap = _cloneShare(_restOf(DATA));
+    _SAVE.msgJson = JSON.stringify(DATA.messages || null);
+  }catch(e){ _SAVE.snap = null; }
+}
+function _saveDot(){ const d = document.getElementById('conn-status'); if(d) d.classList.toggle('is-saving', _SAVE.pending>0); }
+let _saveRunning = null, _saveAgain = false;
+function saveData(){
+  if(_saveRunning){ _saveAgain = true; return _saveRunning; }
+  _saveRunning = (async ()=>{
+    let ok = true;
+    try{ do{ _saveAgain = false; ok = await _saveDataOnce(); }while(_saveAgain); }
+    finally{ _saveRunning = null; }
+    return ok;
+  })();
+  return _saveRunning;
+}
+async function _saveDataOnce(){
   syncActiveYearStore();
   const dot = document.getElementById('conn-status');
   try{
     if(FIREBASE_ENABLED && fbDb){
-      /* Mesaj yo pa ekri ak rès done yo (yo gen pwòp tranzaksyon) — konsa yon
-         sovgad nòt/klas pa ka efase mesaj ki fenk rive. */
-      const rest = Object.assign({}, DATA); delete rest.messages; delete rest.typing; delete rest.pushQueue; delete rest.pushTokens;
-      const jobs = [fbDb.ref(schoolDataRefPath()).update(rest)];
-      if(Array.isArray(DATA.messages)) jobs.push(saveMessages());
-      await Promise.all(jobs);
+      const rest = _restOf(DATA);
+      const path = schoolDataRefPath();
+      const ref = fbDb.ref(path);
+      const jobs = [];
+      const mySeq = ++_SAVE.seq;
+      const canDiff = (_SAVE.ref===DATA && _SAVE.path===path && _SAVE.snap);
+      let wrote = 0;
+      if(canDiff){
+        const out = {};
+        _diffInto(_SAVE.snap, rest, '', out);
+        wrote = Object.keys(out).length;
+        if(wrote > 0 && wrote <= 800) jobs.push(ref.update(out));
+        else if(wrote > 800) jobs.push(ref.update(_cleanVal(rest)));
+      } else {
+        wrote = 1;
+        jobs.push(ref.update(rest));   // premye sovgad apre yon chajman/enpò : ekri tout (kòm avan)
+      }
+      const newSnap = _cloneShare(rest);
+      if(Array.isArray(DATA.messages)){
+        const mj = JSON.stringify(DATA.messages);
+        if(_SAVE.msgJson===null) _SAVE.msgJson = mj;
+        else if(mj !== _SAVE.msgJson){ jobs.push(saveMessages()); _SAVE.msgJson = mj; }
+      }
+      if(jobs.length===0){
+        if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); }
+        return true;
+      }
+      _SAVE.pending++; _saveDot();
+      const all = Promise.all(jobs).then(()=>{
+        if(mySeq > _SAVE.applied){ _SAVE.applied = mySeq; _SAVE.ref = DATA; _SAVE.path = path; _SAVE.snap = newSnap; }
+        if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
+        return true;
+      }).catch(e=>{
+        console.error('Erè pou anrejistre done yo', e);
+        _SAVE.snap = null;   // pwochen sovgad ap ekri tout, pou pa pèdi anyen
+        if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
+        return false;
+      }).finally(()=>{ _SAVE.pending--; _saveDot(); });
+      const early = await Promise.race([ all, new Promise(r=>setTimeout(()=>r('slow'), 1200)) ]);
+      if(early === 'slow'){
+        all.then(ok=>{ if(ok===false) showToast({ title:'Sovgad la pa pase', message:'Verifye entènèt ou — chanjman an ap eseye ankò.', duration:5000 }); });
+        return true;
+      }
+      return early;
     } else {
       await window.storage.set(schoolStorageKey(), JSON.stringify(DATA), true);
+      if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
+      return true;
     }
-    if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
-    return true;
   }
   catch(e){
     console.error('Erè pou anrejistre done yo', e);
+    _SAVE.snap = null;
     if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
     return false;
   }
@@ -3871,6 +4007,7 @@ async function boot(){
   DATA = loaded || { schoolName:'', crestCode:'', admins:[], classes:[], terms:[...DEFAULT_TERMS] };
   normalizeLoadedData(DATA);
   if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+  if(loaded) _saveSnapInit();
   if(!DATA.avgScale) DATA.avgScale = 100;
   migrateAcademicYears();
   migrateTeacherProfiles();
@@ -7958,6 +8095,7 @@ function wireEvents(view){
       DATA = loaded;
       normalizeLoadedData(DATA);
       if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+      _saveSnapInit();
       if(!DATA.avgScale) DATA.avgScale = 100;
       migrateAcademicYears();
       migrateTeacherProfiles();
@@ -7993,6 +8131,7 @@ function wireEvents(view){
       DATA = loaded;
       normalizeLoadedData(DATA);
       if(!DATA.terms || DATA.terms.length===0) DATA.terms=[...DEFAULT_TERMS];
+      _saveSnapInit();
       if(!DATA.avgScale) DATA.avgScale = 100;
       migrateAcademicYears();
       migrateTeacherProfiles();
