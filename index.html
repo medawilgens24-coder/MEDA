@@ -1314,6 +1314,43 @@
   .auth-card::before{height:4px;background:linear-gradient(90deg,var(--margin) 0 33%,var(--accent) 33% 66%,var(--g1) 66% 100%);}
   .role-tab.active{background:linear-gradient(135deg,var(--g1),var(--g2) 55%,var(--g3));color:#fff;box-shadow:0 4px 12px rgba(var(--blue-rgb),.30);border-radius:6px;}
   .role-tabs{border-radius:8px;}
+  /* Retouch : pa gen liy kaye, kwen won, ba anlè ki li */
+  :root{--radius:12px;}
+  body,.auth-page{background-image:none !important;}
+  .card{border-radius:16px;}
+  .card-head .ic-wrap{border-radius:10px;}
+  .btn-pill{border-radius:22px;}
+  .field input,.field select,.field textarea{border-radius:10px;}
+  .auth-card{border-radius:18px;}
+  .auth-brand .logo{border-radius:12px;}
+  .role-tabs{border-radius:14px;}
+  .role-tab.active{border-radius:10px;}
+  .fb-nav-left .logo{border-radius:12px;}
+  .nav-avatar{border-radius:50%;}
+  .nav-badge{border-radius:9px;}
+  .msg-bubble{border-radius:16px;}
+  .msg-bubble.mine{border-radius:18px 18px 4px 18px;}
+  .msg-bubble.theirs{border-radius:4px 18px 18px 18px;}
+  .msg-compose{border-radius:22px;}
+  .msg-compose .btn-pill{border-radius:50%;}
+  .msg-avatar{border-radius:14px;}
+  .msg-convo-item{border-radius:12px;}
+  .page-head{border-radius:0 12px 12px 0;}
+  /* Ikòn ba anlè : toujou blan, pa janm fonse sou fon fonse a */
+  .fb-nav .nav-icon-btn,.fb-nav .nav-icon-btn svg{color:#fff !important;}
+  .fb-nav .nav-icon-btn{background:transparent;border:0;opacity:.82;}
+  .fb-nav .nav-icon-btn.active{opacity:1;}
+  .fb-nav .nav-icon-btn:hover{background:rgba(255,255,255,.12);}
+  .fb-nav button{color:#fff;}
+  /* Meni anba : pa gen kontou nwa default bouton yo */
+  .fb-bottom-nav .nav-icon-btn{border:0;background:transparent;}
+  @media (max-width:900px){
+    html:not([class*="navstyle-"]) .fb-bottom-nav .nav-icon-btn{border-radius:16px;}
+    .fb-bottom-nav{border-radius:20px 20px 0 0;}
+  }
+  .fb-nav .icon-round-btn,.fb-nav .icon-round-btn svg{color:#fff !important;}
+  .fb-nav .icon-round-btn{background:rgba(255,255,255,.14);border:0;}
+  .fb-nav .icon-round-btn:hover{background:rgba(255,255,255,.24);}
 </style>
 </head>
 <body>
@@ -1352,7 +1389,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.55';
+const APP_VERSION = '2.26.10.56';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
