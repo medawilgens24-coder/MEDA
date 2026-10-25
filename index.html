@@ -1223,7 +1223,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.40';
+const APP_VERSION = '2.26.10.41';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2640,6 +2640,50 @@ async function saveScheduleOnly(cls){
     return false;
   }
 }
+/* Sovgad RAPID pou nòt yo : voye sèlman nòt yon elèv pou yon trimès (pa tout DATA a). */
+async function saveGradeSlot(cls, term, studentId){
+  if(!(FIREBASE_ENABLED && fbDb)) return await saveData();
+  const dot = document.getElementById('conn-status');
+  try{
+    const idx = (DATA.classes||[]).indexOf(cls);
+    if(idx < 0) return await saveData();
+    const slot = (cls.grades && cls.grades[term] && cls.grades[term][studentId]) || null;
+    const val = (slot && Object.keys(slot).length) ? JSON.parse(JSON.stringify(slot)) : null;
+    const rel = 'grades/'+term+'/'+studentId;
+    const updates = {};
+    updates['classes/'+idx+'/'+rel] = val;
+    if(DATA.activeYear) updates['academicYears/'+DATA.activeYear+'/classes/'+idx+'/'+rel] = val;
+    await fbDb.ref(schoolDataRefPath()).update(updates);
+    if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
+    return true;
+  }catch(e){
+    console.error('Erè sovgad nòt', e);
+    if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
+    return false;
+  }
+}
+const _gradeDirty = new Map();
+let _gradePending = 0;
+function gradeStatus(msg, color){
+  const el = document.getElementById('grade-save-status');
+  if(el){ el.textContent = msg; el.style.color = color || ''; }
+}
+async function gradeSaveNow(cls, term, studentId){
+  _gradeDirty.delete(term+'|'+studentId);
+  _gradePending++; gradeStatus('Ap sove...');
+  let res;
+  try{ res = await Promise.race([ saveGradeSlot(cls, term, studentId), new Promise(r=>setTimeout(()=>r('timeout'), 12000)) ]); }
+  catch(e){ res = false; }
+  _gradePending--;
+  if(_gradePending===0){
+    if(res===true){ gradeStatus('✓ Sove', '#1B7A2E'); setTimeout(()=>{ if(_gradePending===0) gradeStatus(''); }, 2200); }
+    else if(res==='timeout') gradeStatus('⚠ Sèvè a poko konfime (nòt la sou aparèy la)', '#B7791F');
+    else gradeStatus('✗ Pa sove — verifye entènèt', '#E0393F');
+  }
+}
+function gradeFlushDirty(){ _gradeDirty.forEach(v=>gradeSaveNow(v.cls, v.term, v.studentId)); }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') gradeFlushDirty(); });
+window.addEventListener('pagehide', gradeFlushDirty);
 async function saveData(){
   syncActiveYearStore();
   const dot = document.getElementById('conn-status');
@@ -6057,6 +6101,7 @@ function tabGrades(cls, role){
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div class="card-head" style="margin:0">${ICONS.pencil}<h3>Antre nòt (an pwen, sou barèm chak matyè)</h3></div>
+      <span id="grade-save-status" aria-live="polite" style="font-size:12.5px;font-weight:700;min-width:110px;text-align:right"></span>
       <select class="term-select" id="term-picker">
         ${DATA.terms.map(t=>`<option value="${escapeHtml(t)}" ${t===term?'selected':''}>${escapeHtml(t)}</option>`).join('')}
       </select>
@@ -7072,7 +7117,7 @@ function docScallopD(cx, cy, R, n){
 function docEmblem(x, y, sc, col){ return `<g transform="translate(${x} ${y}) scale(${sc})">${stampEmblem(col)}</g>`; }
 function docLaurelRing(cx, cy, r, col){ return `<g transform="translate(${cx} ${cy}) scale(${(r/50).toFixed(3)}) translate(-100 -100)">${stampLaurel(100,100,50,col)}</g>`; }
 function docShine(uid, cx, cy, r){
-  return `<radialGradient id="${uid}" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${uid})"/>`;
+  return `<radialGradient id="${uid}" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${uid})"/>`;
 }
 function docTails(cx, top, len, fill, stripe, w){
   w = w||14;
@@ -7500,17 +7545,15 @@ function renderDocBandeau(cls, st, title, body, colorId, fontId){
 }
 /* ---- Badj/sceau SVG an degrade, ak riban anba ---- */
 function sceauBadgeSvg(){
-  const uid = docUid('sc'), sh = docUid('sh');
+  const sh = docUid('sh');
   return `<svg viewBox="0 0 120 150" width="82" height="102" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="${uid}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" style="stop-color:var(--doc-primary,#16233F)"/>
-      <stop offset="100%" style="stop-color:var(--doc-accent,#C9A227)"/>
-    </linearGradient></defs>
-    ${docTails(60,76,68,'url(#'+uid+')','#fff',19)}
-    <path d="${docScallopD(60,50,47,30)}" fill="url(#${uid})" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-    <circle cx="60" cy="50" r="38.5" fill="none" stroke="#fff" stroke-width="1.6"/>
-    <circle cx="60" cy="50" r="34.5" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.6 3"/>
-    ${docEmblem(60,45,1.0,'#fff')}
+    ${docTails(60,76,68,_DP,_DA,19)}
+    <path d="${docScallopD(60,50,47,30)}" fill="${_DA}" stroke="${_DP}" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="60" cy="50" r="41" fill="none" stroke="${_DP}" stroke-width="1"/>
+    <circle cx="60" cy="50" r="36.5" fill="${_DP}"/>
+    <circle cx="60" cy="50" r="33" fill="none" stroke="${_DA}" stroke-width=".7" stroke-dasharray="1.5 2.6"/>
+    ${docLaurelRing(60,52,27.5,_DA)}
+    ${docEmblem(60,42,.82,_DA)}
     ${docShine(sh,60,50,46)}
   </svg>`;
 }
@@ -7544,15 +7587,16 @@ function univCrestSvg(){
   const uid = docUid('un'), sh = docUid('sh');
   const shield = 'M50,4 L90,18 L90,58 C90,90 72,108 50,116 C28,108 10,90 10,58 L10,18 Z';
   return `<svg viewBox="0 0 100 120" width="66" height="80" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" style="stop-color:var(--doc-primary,#16233F)"/>
-      <stop offset="100%" style="stop-color:var(--doc-accent,#C9A227)"/>
-    </linearGradient>
-    <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-    <path d="${shield}" fill="url(#${uid})" stroke="${_DP}" stroke-width="2.4" stroke-linejoin="round"/>
-    <path d="${shield}" fill="none" stroke="#fff" stroke-width="1.2" transform="translate(50 60) scale(.86) translate(-50 -60)"/>
-    ${docEmblem(50,46,1.22,'#fff')}
-    <path d="M32,92 L50,100 L68,92" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <clipPath id="${uid}"><path d="${shield}"/></clipPath>
+    <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <g clip-path="url(#${uid})">
+      <rect x="0" y="0" width="100" height="120" fill="${_DP}"/>
+      <path d="M0,0 H100 V34 L50,26 L0,34 Z" fill="${_DA}"/>
+      <path d="M10,92 L50,108 L90,92 V104 L50,120 L10,104 Z" fill="${_DA}" opacity=".9"/>
+    </g>
+    ${docEmblem(50,56,1.15,'#fff')}
+    <path d="${shield}" fill="none" stroke="${_DP}" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="${shield}" fill="none" stroke="${_DA}" stroke-width="1.1" transform="translate(50 60) scale(.9) translate(-50 -60)"/>
     <path d="${shield}" fill="url(#${sh})"/>
   </svg>`;
 }
@@ -8978,55 +9022,50 @@ function wireClassManager(cls, role){
   else if(tab==='note'){
     const tp = document.getElementById('term-picker');
     if(tp) tp.addEventListener('change', ()=>{ ui.term = tp.value; role==='admin'? render('admin') : render('teacher'); });
+    const refreshTotal = (studentId, term)=>{
+      const totalCell = document.querySelector(`[data-total-for="${studentId}"]`);
+      if(totalCell){
+        const {sumPoints, totalMax} = studentGradeTotal(cls, term, studentId);
+        totalCell.innerHTML = `<strong>${sumPoints}</strong> / ${totalMax}`;
+      }
+    };
     document.querySelectorAll('.grade-input').forEach(inp=>{
+      const ctx = ()=>({ term: ui.term || DATA.terms[0], studentId: inp.dataset.gradeStudent, subjectId: inp.dataset.gradeSubject });
+      /* Pandan w ap tape : nòt la antre nan done yo ANPLIS total la kalkile TOUSUIT, epi sovgad la fèt apre 10 ms. */
       inp.addEventListener('input', ()=>{
-        debounceSave(inp, async ()=>{
-          const term = ui.term || DATA.terms[0];
-          const studentId = inp.dataset.gradeStudent, subjectId = inp.dataset.gradeSubject;
-          const raw = inp.value.trim();
-          if(raw==='') return; // pa efase anyen pandan w ap tape — sa fèt sèlman lè w kite chan an
-          const sub = cls.subjects.find(s=>s.id===subjectId);
-          const maxPts = sub ? (sub.coef||1) : 100;
-          const num = Number(raw);
-          if(!Number.isFinite(num) || num<0 || num>maxPts) return; // pa anrejistre yon valè pa valab pandan w ap tape toujou
-          const slot = ensureGradeSlot(cls, term, studentId);
-          slot[subjectId] = num;
-          await saveData();
-        }, 800);
+        const {term, studentId, subjectId} = ctx();
+        const raw = inp.value.trim();
+        const sub = cls.subjects.find(s=>s.id===subjectId);
+        const maxPts = sub ? (sub.coef||1) : 100;
+        const num = Number(raw);
+        const invalid = raw!=='' && (!Number.isFinite(num) || num<0 || num>maxPts);
+        inp.style.borderColor = invalid ? '#E0393F' : '';
+        if(raw==='' || invalid) return;   // pa efase ni anrejistre yon valè pa valab pandan w ap tape toujou
+        const slot = ensureGradeSlot(cls, term, studentId);
+        slot[subjectId] = num;
+        refreshTotal(studentId, term);
+        _gradeDirty.set(term+'|'+studentId, {cls, term, studentId});
+        debounceSave(inp, ()=>gradeSaveNow(cls, term, studentId), 10);
       });
       inp.addEventListener('change', async ()=>{
-        const term = ui.term || DATA.terms[0];
-        const studentId = inp.dataset.gradeStudent, subjectId = inp.dataset.gradeSubject;
+        const {term, studentId, subjectId} = ctx();
         const raw = inp.value.trim();
         if(raw===''){
           const slot = ensureGradeSlot(cls, term, studentId);
           delete slot[subjectId];
-          await saveData();
         } else {
           const sub = cls.subjects.find(s=>s.id===subjectId);
           const maxPts = sub ? (sub.coef||1) : 100;
           const num = Number(raw);
-          if(!Number.isFinite(num)){
-            await showAlert('Antre yon valè nimerik valab pou nòt la.');
-            return;
-          }
-          if(num < 0){
-            await showAlert('Nòt la pa ka negatif.');
-            return;
-          }
-          if(num > maxPts){
-            await showAlert(`Nòt la pa ka depase ${maxPts}.`);
-            return;
-          }
+          if(!Number.isFinite(num)){ await showAlert('Antre yon valè nimerik valab pou nòt la.'); return; }
+          if(num < 0){ await showAlert('Nòt la pa ka negatif.'); return; }
+          if(num > maxPts){ await showAlert(`Nòt la pa ka depase ${maxPts}.`); return; }
           const slot = ensureGradeSlot(cls, term, studentId);
           slot[subjectId] = num;
-          await saveData();
         }
-        const totalCell = document.querySelector(`[data-total-for="${studentId}"]`);
-        if(totalCell){
-          const {sumPoints, totalMax} = studentGradeTotal(cls, term, studentId);
-          totalCell.innerHTML = `<strong>${sumPoints}</strong> / ${totalMax}`;
-        }
+        inp.style.borderColor = '';
+        refreshTotal(studentId, term);
+        gradeSaveNow(cls, term, studentId);
       });
     });
   }
