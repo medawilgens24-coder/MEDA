@@ -49,6 +49,8 @@
     --blue-dark:#166FE0;
     --blue-soft:#E7F0FE;
     --accent:#C79A3B;
+    --g1:#0AA4F5;--g2:#1877F2;--g3:#5B5BE0;
+    --blue-rgb:24,119,242;--accent-rgb:199,154,59;--g1-rgb:10,164,245;--g3-rgb:91,91,224;
     --bg:#F0F2F5;
     --card:#FFFFFF;
     --text:#050505;
@@ -78,14 +80,18 @@
   svg.ic{width:19px;height:19px;flex-shrink:0;}
 
   /* ============ AUTH (login / signup) ============ */
-  .auth-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  .auth-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(900px 520px at 10% -8%, rgba(var(--g1-rgb),.30), transparent 62%),
+               radial-gradient(760px 520px at 105% 8%, rgba(var(--g3-rgb),.24), transparent 62%),
+               radial-gradient(900px 560px at 50% 112%, rgba(var(--accent-rgb),.20), transparent 62%), var(--bg);}
   .auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:26px;}
-  .auth-brand .logo{width:44px;height:44px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;}
-  .auth-brand .bn{font-size:22px;font-weight:800;color:var(--blue);letter-spacing:-.01em;}
+  .auth-brand .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--g3));box-shadow:0 6px 16px rgba(var(--blue-rgb),.35);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;}
+  .auth-brand .bn{font-size:22px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,var(--g1),var(--g2) 50%,var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;}
   .auth-wrap{display:flex;gap:40px;align-items:center;max-width:900px;width:100%;justify-content:center;flex-wrap:wrap;}
   .auth-pitch{max-width:380px;}
   .auth-pitch h2{font-size:25px;line-height:1.35;color:var(--text);font-weight:700;}
-  .auth-card{background:var(--card);border-radius:12px;box-shadow:var(--shadow-pop);padding:26px 26px 22px;width:100%;max-width:360px;}
+  .auth-card{background:var(--card);border-radius:18px;box-shadow:0 18px 44px rgba(var(--blue-rgb),.16),var(--shadow-pop);padding:30px 26px 22px;width:100%;max-width:360px;position:relative;overflow:hidden;}
+  .auth-card::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--accent));}
   .field{margin-bottom:12px;}
   .field label{display:block;font-size:12.5px;color:var(--text-soft);margin-bottom:5px;font-weight:600;line-height:1.4;}
   .field input,.field select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:6px;font-size:15px;background:#fff;transition:border-color .15s, box-shadow .15s;}
@@ -204,7 +210,9 @@
   @media (min-width:901px){ .msg-back{display:none;} }
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;font-weight:700;transition:background .15s, box-shadow .15s, transform .1s;}
   .btn-pill{border-radius:22px;padding:11px 20px;font-size:15px;min-height:44px;}
-  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 52%,var(--g3) 100%);color:#fff;box-shadow:0 8px 20px rgba(var(--blue-rgb),.30);transition:filter .15s, transform .1s, box-shadow .15s;}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.06);}
+  .btn-primary:active:not(:disabled){transform:translateY(1px);box-shadow:0 4px 12px rgba(var(--blue-rgb),.28);}
   .btn-primary:hover{background:var(--blue-dark);}
   .btn-primary:active{transform:translateY(1px);}
   .btn-block{width:100%;}
@@ -214,7 +222,7 @@
   .divider-word::before,.divider-word::after{content:"";flex:1;height:1px;background:var(--line);}
   .role-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--bg);padding:4px;border-radius:8px;}
   .role-tab{flex:1;padding:8px;text-align:center;border-radius:6px;border:none;background:transparent;font-size:13.5px;font-weight:700;color:var(--text-soft);transition:background .15s,color .15s;}
-  .role-tab.active{background:#fff;color:var(--blue);box-shadow:var(--shadow);}
+  .role-tab.active{background:linear-gradient(135deg,var(--g1),var(--g2) 55%,var(--g3));color:#fff;box-shadow:0 4px 12px rgba(var(--blue-rgb),.32);}
   .error-msg{color:var(--red);font-size:13px;margin:-4px 0 12px;font-weight:600;line-height:1.5;}
   .hint{font-size:12px;color:var(--text-faint);margin-top:14px;line-height:1.6;text-align:center;}
   @media (max-width:760px){ .auth-pitch{display:none;} }
@@ -1077,7 +1085,6 @@
   html.colorful .sb-link:nth-child(5n+4) .ic-wrap{background:rgba(232,137,12,.16);color:#E8890C;}
   html.colorful .sb-link:nth-child(5n) .ic-wrap{background:rgba(14,154,139,.15);color:#0E9A8B;}
   html.colorful .sb-link.active .ic-wrap{background:var(--blue);color:#fff;}
-  html.colorful .btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));}
   html.colorful .card:has(> .wal-balance){background:linear-gradient(135deg,#15803D,#0F5E3A);border:none;color:#fff;}
   html.colorful .card:has(> .wal-balance) .wal-balance,html.colorful .card:has(> .wal-balance) .card-head h3,html.colorful .card:has(> .wal-balance) .wal-sub{color:#fff;}
   html.colorful .card:has(> .wal-balance) .card-head{border-bottom-color:rgba(255,255,255,.22);}
@@ -1223,7 +1230,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.41';
+const APP_VERSION = '2.26.10.42';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2288,6 +2295,29 @@ function ucHex(h){ h=String(h||'').trim(); return /^#[0-9a-f]{6}$/i.test(h) ? h.
 function ucRgb(h){ return [1,3,5].map(i=>parseInt(h.substr(i,2),16)); }
 function ucToHex(r){ return '#'+r.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('').toUpperCase(); }
 function ucMix(a,b,t){ const x=ucRgb(a), y=ucRgb(b); return ucToHex(x.map((v,i)=>v*(1-t)+y[i]*t)); }
+function ucToHsl(hex){
+  const c = ucRgb(hex).map(v=>v/255), r=c[0], g=c[1], b=c[2];
+  const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+  let h = 0, s = 0; const l = (mx+mn)/2;
+  if(mx!==mn){
+    const d = mx-mn;
+    s = l>.5 ? d/(2-mx-mn) : d/(mx+mn);
+    if(mx===r) h = (g-b)/d + (g<b?6:0); else if(mx===g) h = (b-r)/d + 2; else h = (r-g)/d + 4;
+    h *= 60;
+  }
+  return [h,s,l];
+}
+function ucFromHsl(h,s,l){
+  h = ((h%360)+360)%360;
+  const c = (1-Math.abs(2*l-1))*s, x = c*(1-Math.abs((h/60)%2-1)), m = l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;} else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  return ucToHex([(r+m)*255,(g+m)*255,(b+m)*255]);
+}
+function ucShift(hex, dh, dl, ds){
+  const t = ucToHsl(hex);
+  return ucFromHsl(t[0]+dh, Math.min(1,Math.max(0,t[1]+(ds||0))), Math.min(.88,Math.max(.14,t[2]+(dl||0))));
+}
 function ucLum(h){ const c=ucRgb(h).map(v=>{ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
 function applyUserColors(){
   const root = document.documentElement, c = USER_COLORS;
@@ -2301,6 +2331,13 @@ function applyUserColors(){
   st.setProperty('--blue-dark', ucMix(p,'#000000',.12));
   st.setProperty('--blue-soft', dark ? ucMix(p,'#242526',.78) : ucMix(p,'#FFFFFF',.88));
   st.setProperty('--accent', a);
+  /* Degrade pwofesyonèl 3 koulè (kòmanse pi klè/vwazen, mitan = koulè ou, fen = yon ti jan pi fonse) */
+  const g1 = ucShift(p,-26,.02,.02), g3 = ucShift(p,38,-.06,.04);
+  st.setProperty('--g1', g1); st.setProperty('--g2', p); st.setProperty('--g3', g3);
+  st.setProperty('--blue-rgb', ucRgb(p).join(','));
+  st.setProperty('--accent-rgb', ucRgb(a).join(','));
+  st.setProperty('--g1-rgb', ucRgb(g1).join(','));
+  st.setProperty('--g3-rgb', ucRgb(g3).join(','));
   root.classList.toggle('colorful', c.colorful !== false);
   try{ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', p); }catch(e){}
 }
