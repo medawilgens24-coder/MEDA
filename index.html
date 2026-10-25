@@ -457,7 +457,12 @@
   .schedule-time-input{min-width:105px;font-weight:700;}
 
   /* ============ FICH ELÈV ============ */
-  .fiche-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .fiche-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px;position:relative;padding-right:44px;}
+  .fiche-edit-btn{position:absolute;top:0;right:0;width:34px;height:34px;border-radius:50%;border:none;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85;box-shadow:0 1px 4px rgba(0,0,0,.14);padding:0;}
+  .fiche-edit-btn:hover,.fiche-edit-btn:active{opacity:1;}
+  .fiche-edit-btn svg{width:17px;height:17px;}
+  .se-box{text-align:left;max-width:440px;max-height:90vh;overflow-y:auto;}
+  .se-box .field{margin-bottom:12px;}
   .fiche-head .avatar-lg{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;background-size:cover;background-position:center;}
   .avatar-photo-wrap{position:relative;width:64px;height:64px;flex-shrink:0;}
   .avatar-photo-wrap .avatar-lg{width:100%;height:100%;}
@@ -1218,7 +1223,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.36';
+const APP_VERSION = '2.26.10.40';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1281,45 +1286,49 @@ async function ensureBaselineAuth(){
 
 <script>
 /* ===================== ICONS ===================== */
+const _ICO = (body, cls) => `<svg ${cls===null?'':'class="ic" '}viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const _T = 'fill="currentColor" fill-opacity=".16"';   /* ton dous (duotone) — siyati vizyèl Meda */
+const _D = (cx,cy,r)=>`<circle cx="${cx}" cy="${cy}" r="${r||.95}" fill="currentColor" stroke="none"/>`;
+/* Seri ikòn Meda : kontou won + yon ton dous anndan (duotone), pa sanble ak seri jenerik yo. */
 const ICONS = {
-  home:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9"/></svg>`,
-  grid:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>`,
-  gear:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56v.17a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.6a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 6.25 7.4a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.7A1.7 1.7 0 0 0 11.74 1.5V1.5a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 16.78 3.53a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09c.24.68.85 1.16 1.56 1.15h.17a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z"/></svg>`,
-  users:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 19c.7-3 3-4.6 6.5-4.6s5.8 1.6 6.5 4.6"/><circle cx="17" cy="8.5" r="2.4"/><path d="M16 14.6c2.6.2 4.3 1.7 4.9 4.4"/></svg>`,
-  book:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.2C4 4 5 3.3 6.2 3.5c2 .3 4 1 5.8 2.2 1.8-1.2 3.8-1.9 5.8-2.2C19 3.3 20 4 20 5.2v13c0 1-.9 1.6-1.9 1.4a13 13 0 0 0-6.1.7 13 13 0 0 0-6.1-.7C4.9 19.8 4 19.2 4 18.2Z"/><path d="M12 5.7v13.4"/></svg>`,
-  pencil:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l.9-3.6 10-10 2.7 2.7-10 10z"/><path d="M13.4 7.9l2.7 2.7"/><path d="M4 20h3.6"/></svg>`,
-  trophy:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M7 5.5H4.5A2.5 2.5 0 0 0 5 10.4"/><path d="M17 5.5h2.5A2.5 2.5 0 0 1 19 10.4"/><path d="M10 15.5v2M14 15.5v2"/><path d="M8.5 20h7"/><path d="M9 17.5h6l.6 2.5H8.4Z"/></svg>`,
-  plus:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
-  printer:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9V4h11v5"/><rect x="4.5" y="9" width="15" height="7" rx="1.2"/><path d="M6.5 14.5h11V20h-11Z"/></svg>`,
-  key:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="14.5" r="3.5"/><path d="M10.8 12 17 5.8M15 7.8l2 2M17.5 5.3l2 2"/></svg>`,
-  eye:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>`,
-  eyeOff:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.6C11 5.55 11.5 5.5 12 5.5c6 0 9.5 6.5 9.5 6.5a15 15 0 0 1-3.2 3.9M7 6.9C4.2 8.7 2.5 12 2.5 12s3.5 6.5 9.5 6.5c1.6 0 3-.4 4.2-1.1"/><path d="M9.9 10.1a3 3 0 0 0 4.2 4.2"/></svg>`,
-  wallet:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a1 1 0 0 1 1 1v2"/><path d="M4 7.5V17a2 2 0 0 0 2 2h12.5a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5Z"/><circle cx="15.5" cy="13.5" r="1.1" fill="currentColor"/></svg>`,
-  help:`<svg class="ic\" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 4"/><circle cx="12" cy="17.6" r=".15" fill="currentColor" stroke-width="2.6"/></svg>`,
-  logout:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20H5.5a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 5.5 4H9"/><path d="M16 16l4-4-4-4M20 12H9"/></svg>`,
-  trash:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5h15M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V6.5M6.5 6.5 7.3 19a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12.5"/></svg>`,
-  refresh:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 0 1 12.6-5.4L19 8.4M19.5 12a7.5 7.5 0 0 1-12.6 5.4L5 15.6"/><path d="M19 4.8v3.6h-3.6M5 19.2v-3.6h3.6"/></svg>`,
-  chart:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M4 20h16"/></svg>`,
-  idcard:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.6 1.8-2.4 3-2.4s2.4.8 3 2.4"/><path d="M14 9.5h5M14 13h5"/></svg>`,
-  calendar:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/><path d="M7.5 13h2M11 13h2M14.5 13h2M7.5 16.5h2M11 16.5h2"/></svg>`,
-  moon:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>`,
-  stampic:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="6.5"/><path d="M9 10.2l2 2 4-4.2"/><path d="M8.5 16.2 6.5 21l5.5-2.6 5.5 2.6-2-4.8"/></svg>`,
-  camera:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-1.6h7L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.4"/></svg>`,
-  flag:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4.5c1.8-1 3.6-1 5.4 0s3.6 1 5.4 0v9c-1.8 1-3.6 1-5.4 0s-3.6-1-5.4 0Z"/></svg>`,
-  list:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 6h12M8.5 12h12M8.5 18h12"/><circle cx="4" cy="6" r="1.1"/><circle cx="4" cy="12" r="1.1"/><circle cx="4" cy="18" r="1.1"/></svg>`,
-  chat:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10.5H9.5L5 20v-4H4Z"/><path d="M8 9.5h8M8 12.5h5"/></svg>`,
-  send:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l16-8L4 4l2 7 8 1-8 1Z"/></svg>`,
-  back:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`,
-  bell:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5.2 1.5 5.8H4.5C4.5 15.7 6 14.5 6 10.5Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>`,
-  filedoc:`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h7l4 4V19a1.3 1.3 0 0 1-1.3 1.3H7A1.3 1.3 0 0 1 5.7 19V4.8A1.3 1.3 0 0 1 7 3.5Z"/><path d="M14 3.5V8h4"/><path d="M8.5 12.5h7M8.5 15.5h7M8.5 18h4"/></svg>`,
+  home:_ICO(`<path d="M4 11.2V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-7.8L12 4.2Z" ${_T}/><path d="M2.8 12 12 3.8 21.2 12"/><path d="M9.8 20.5v-4.6a2.2 2.2 0 0 1 4.4 0v4.6"/>`),
+  grid:_ICO(`<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2.2" ${_T}/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2.2" ${_T}/>`),
+  gear:_ICO(`<path d="M10.4 3.5h3.2l.5 2.3 1.5.9 2.2-.8 1.6 2.8-1.7 1.6v1.8l1.7 1.6-1.6 2.8-2.2-.8-1.5.9-.5 2.3h-3.2l-.5-2.3-1.5-.9-2.2.8-1.6-2.8 1.7-1.6v-1.8L4.7 8.7l1.6-2.8 2.2.8 1.5-.9Z" ${_T}/><circle cx="12" cy="12" r="2.8"/>`),
+  users:_ICO(`<circle cx="9" cy="8.5" r="3.3" ${_T}/><path d="M2.8 20c.6-3.5 3-5.2 6.2-5.2s5.6 1.7 6.2 5.2Z" ${_T}/><path d="M15.6 5.6a3 3 0 0 1 0 5.8M18 14.9c1.8.6 2.9 2.2 3.2 5.1"/>`),
+  book:_ICO(`<path d="M12 6.6C10.2 5.1 7.5 4.4 3.8 4.6v13.2c3.7-.2 6.4.5 8.2 2 1.8-1.5 4.5-2.2 8.2-2V4.6c-3.7-.2-6.4.5-8.2 2Z" ${_T}/><path d="M12 6.6v13.2"/>`),
+  pencil:_ICO(`<path d="M4.6 19.4l.9-4 9.5-9.5a2 2 0 0 1 2.8 0l.3.3a2 2 0 0 1 0 2.8l-9.5 9.5Z" ${_T}/><path d="M13.7 7.3l3 3"/><path d="M13.5 20.5h6.5"/>`),
+  trophy:_ICO(`<path d="M7.5 3.8h9v5.6a4.5 4.5 0 0 1-9 0Z" ${_T}/><path d="M7.5 5.4H5.2a1 1 0 0 0-1 1c0 2.2 1.4 3.7 3.6 4M16.5 5.4h2.3a1 1 0 0 1 1 1c0 2.2-1.4 3.7-3.6 4"/><path d="M12 13.9v3"/><path d="M9.8 16.9h4.4l.7 3.6H9.1Z" ${_T}/>`),
+  plus:_ICO(`<path d="M12 5.5v13M5.5 12h13" stroke-width="2.2"/>`),
+  printer:_ICO(`<path d="M7 8.4V4.2h10v4.2"/><rect x="3.5" y="8.4" width="17" height="8.2" rx="2.2" ${_T}/><path d="M7 13.6h10v6.2H7Z"/>${_D(17.2,11.4)}`),
+  key:_ICO(`<circle cx="8" cy="15" r="4.2" ${_T}/><path d="M11 12 19.6 3.6M16.6 6.6l2.8 2.8M14.2 9l2 2"/>${_D(8,15,1.1)}`),
+  eye:_ICO(`<path d="M2.4 12S5.8 5.7 12 5.7 21.6 12 21.6 12 18.2 18.3 12 18.3 2.4 12 2.4 12Z" ${_T}/><circle cx="12" cy="12" r="3"/>${_D(12,12,1)}`),
+  eyeOff:_ICO(`<path d="M2.4 12S5.8 5.7 12 5.7 21.6 12 21.6 12 18.2 18.3 12 18.3 2.4 12 2.4 12Z" ${_T}/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16" stroke-width="2.1"/>`),
+  wallet:_ICO(`<path d="M3.5 8.2A2.7 2.7 0 0 1 6.2 5.5H17a2 2 0 0 1 2 2"/><rect x="3.5" y="8" width="17" height="11.6" rx="2.6" ${_T}/><path d="M15 13.2h5.5v3.2H15a1.6 1.6 0 0 1 0-3.2Z"/>${_D(16.2,14.8)}`),
+  help:_ICO(`<circle cx="12" cy="12" r="9.2" ${_T}/><path d="M9.3 9.4a2.8 2.8 0 1 1 4.2 2.4c-.9.6-1.5 1.1-1.5 2.1"/>${_D(12,17.1)}`),
+  logout:_ICO(`<path d="M9.5 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3.5Z" ${_T} stroke="none"/><path d="M9.5 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3.5"/><path d="M14 8l4 4-4 4M18 12H9.5"/>`),
+  trash:_ICO(`<path d="M5.8 7.6h12.4l-.9 11.3a2 2 0 0 1-2 1.8H8.7a2 2 0 0 1-2-1.8Z" ${_T}/><path d="M4 7.6h16M9.5 7.6V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2.6M10 11.5v5M14 11.5v5"/>`),
+  refresh:_ICO(`<path d="M4.5 12a7.5 7.5 0 0 1 12.7-5.4L19.5 9"/><path d="M19.5 4.5V9H15"/><path d="M19.5 12a7.5 7.5 0 0 1-12.7 5.4L4.5 15"/><path d="M4.5 19.5V15H9"/>`),
+  chart:_ICO(`<rect x="4" y="12" width="4.2" height="8" rx="1.2" ${_T}/><rect x="9.9" y="4" width="4.2" height="16" rx="1.2" ${_T}/><rect x="15.8" y="8.5" width="4.2" height="11.5" rx="1.2" ${_T}/>`),
+  idcard:_ICO(`<rect x="3" y="5" width="18" height="14" rx="2.6" ${_T}/><circle cx="8.6" cy="11" r="2"/><path d="M5.7 16c.4-1.6 1.5-2.4 2.9-2.4s2.5.8 2.9 2.4M14 10h4.5M14 13.6h3"/>`),
+  calendar:_ICO(`<rect x="3.5" y="5" width="17" height="15.5" rx="2.6" ${_T}/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/>${_D(8.5,14.2)}${_D(12,14.2)}${_D(15.5,14.2)}${_D(8.5,17.2)}`),
+  moon:_ICO(`<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" ${_T}/><path d="M17.4 3.8v2.6M16.1 5.1h2.6"/>`),
+  stampic:_ICO(`<circle cx="12" cy="9.5" r="6.2" ${_T}/><path d="M9.2 9.6l2 2 3.7-3.9"/><path d="M8.6 15l-1.5 5.5 4.9-2.2 4.9 2.2-1.5-5.5"/>`),
+  camera:_ICO(`<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-1.6h7L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" ${_T}/><circle cx="12" cy="13" r="3.4"/>`, null),
+  flag:_ICO(`<path d="M6 21V4"/><path d="M6 4.8c2-1.2 3.9-1.2 5.8 0s3.9 1.2 6.2 0V14c-2.3 1.2-4.3 1.2-6.2 0s-3.8-1.2-5.8 0Z" ${_T}/>`),
+  list:_ICO(`<rect x="3.5" y="4" width="17" height="16" rx="2.6" ${_T}/>${_D(7.4,9,1)}${_D(7.4,12,1)}${_D(7.4,15,1)}<path d="M10.8 9h6.2M10.8 12h6.2M10.8 15h4"/>`),
+  chat:_ICO(`<path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-8l-4.5 3.6v-3.6H6a2 2 0 0 1-2-2Z" ${_T}/><path d="M8 8.8h8M8 12h5"/>`),
+  send:_ICO(`<path d="M20.5 3.8 3.8 10.4l6.3 2.4 2.4 6.3Z" ${_T}/><path d="M10.1 12.8l10.4-9"/>`),
+  back:_ICO(`<path d="M15 5l-7 7 7 7" stroke-width="2.1"/>`),
+  bell:_ICO(`<path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5.4 1.5 6h-15c0-.6 1.5-2 1.5-6Z" ${_T}/><path d="M10 19.4a2.2 2.2 0 0 0 4 0M12 4.2V3"/>`),
+  filedoc:_ICO(`<path d="M7 3.5h7l4.5 4.5v11A1.5 1.5 0 0 1 17 20.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z" ${_T}/><path d="M14 3.5V8h4.5M8.8 12.5h6.4M8.8 16h4.4"/>`)
 };
 
 /* ===================== CUSTOM DIALOG (ranplase alert/confirm/prompt natif) ===================== */
 const DLG_ICONS = {
-  info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".15" fill="currentColor" stroke-width="2.6"/></svg>`,
-  warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 22 20.5H2Z"/><path d="M12 10v4.2"/><circle cx="12" cy="17.3" r=".15" fill="currentColor" stroke-width="2.6"/></svg>`,
-  danger:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5h15M9 6.5V4.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V6.5M6.5 6.5 7.3 19a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12.5"/></svg>`,
-  ask:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 9a2.8 2.8 0 1 1 4.3 2.4c-.9.6-1.5 1.1-1.5 2.3"/><circle cx="12" cy="17.3" r=".15" fill="currentColor" stroke-width="2.6"/><circle cx="12" cy="12" r="9.5"/></svg>`,
+  info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5" fill="currentColor" fill-opacity=".16"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".95" fill="currentColor" stroke="none"/></svg>`,
+  warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.8 20.3H2.2Z" fill="currentColor" fill-opacity=".16"/><path d="M12 10v4.2"/><circle cx="12" cy="17.2" r=".95" fill="currentColor" stroke="none"/></svg>`,
+  danger:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 7.6h12.4l-.9 11.3a2 2 0 0 1-2 1.8H8.7a2 2 0 0 1-2-1.8Z" fill="currentColor" fill-opacity=".16"/><path d="M4 7.6h16M9.5 7.6V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2.6M10 11.5v5M14 11.5v5"/></svg>`,
+  ask:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5" fill="currentColor" fill-opacity=".16"/><path d="M9.3 9.4a2.8 2.8 0 1 1 4.2 2.4c-.9.6-1.5 1.1-1.5 2.1"/><circle cx="12" cy="17.1" r=".95" fill="currentColor" stroke="none"/></svg>`
 };
 function _dlgOpen(kind, title, message, opts){
   opts = opts||{};
@@ -1819,7 +1828,7 @@ function renderMsgBubble(m, role, teacher){
 const TICK_SVG = {
   pending:'<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.7"/><path d="M6 3.3V6l1.9 1.2"/></svg>',
   one:'<svg viewBox="0 0 20 12"><path d="M5 6.6l3.1 3.1 6.4-6.6"/></svg>',
-  two:'<svg viewBox="0 0 20 12"><path d="M1.8 6.6l3.1 3.1 6.2-6.4"/><path d="M8.4 6.6l3.1 3.1 6.4-6.6"/></svg>',
+  two:'<svg viewBox="0 0 20 12"><circle cx="10" cy="6" r="5"/><path d="M7.5 6.2l1.8 1.8 3.4-3.7"/></svg>',
   failed:'<svg viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="5.3"/><path d="M6.5 3.6v3.6M6.5 9.3v.1"/></svg>'
 };
 function msgStatusTicksHtml(m, recipientOnline){
@@ -2076,13 +2085,15 @@ function officialStampHtml(){
 }
 /* ---- Kachèt ofisyèl (kèt SVG pou enprime) ---- */
 const STAMP_MODELS = [
+  { id:'prestige', label:'Prestij (lorye + liv)' },
+  { id:'rosette',  label:'Rozèt (kwòn dantle)' },
   { id:'classic',  label:'Klasik' },
   { id:'notarial', label:'Notaryal' },
   { id:'modern',   label:'Sobri modèn' }
 ];
 function ensureStamp(){
   if(!DATA.stamp){
-    DATA.stamp = { top:'', bottom:'REPIBLIK DAYITI', center:schoolInitials(), slogan:'', color:'#1c3a5e', style:'classic' };
+    DATA.stamp = { top:'', bottom:'REPIBLIK DAYITI', center:schoolInitials(), slogan:'', color:'#1c3a5e', style:'prestige' };
   }
   if(!DATA.stamp.top) DATA.stamp.top = String(DATA.schoolName||'').toUpperCase();
   if(DATA.stamp.slogan===undefined) DATA.stamp.slogan = '';
@@ -2128,6 +2139,42 @@ function stampTickRing(cx, cy, rOuter, rInner, count, col){
   }
   return out;
 }
+function stampScallop(cx, cy, R, n, col){
+  const r = (2*R*Math.sin(Math.PI/n))/2;
+  let d = '';
+  for(let i=0;i<=n;i++){
+    const a = (i/n)*2*Math.PI;
+    const x = (cx+R*Math.cos(a)).toFixed(2), y = (cy+R*Math.sin(a)).toFixed(2);
+    d += i===0 ? `M${x},${y}` : ` A${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${x},${y}`;
+  }
+  return `<path d="${d}Z" fill="none" stroke="${col}" stroke-width="1.3" stroke-linejoin="round"/>`;
+}
+function stampEmblem(col){
+  /* Emblèm Meda : liv ouvè + etwal (edikasyon) */
+  return `<g fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-19,7 C-13,3.5 -6.5,3.5 0,7 V22 C-6.5,18.5 -13,18.5 -19,22Z" fill="${col}" fill-opacity=".14"/>
+    <path d="M19,7 C13,3.5 6.5,3.5 0,7 V22 C6.5,18.5 13,18.5 19,22Z" fill="${col}" fill-opacity=".14"/>
+    <path d="M0,7V22"/>
+    <path d="M-12.5,12.5c3-.9 6-.4 8.5 1M12.5,12.5c-3-.9-6-.4-8.5 1" stroke-width="1"/>
+  </g><path d="${stampStarPath(0,-5,6.5,2.8,5)}" fill="${col}"/>`;
+}
+function stampLaurel(cx, cy, r, col){
+  let out = '';
+  for(const side of [-1,1]){
+    const d0 = 90 + side*8, d1 = 90 + side*92;
+    const p = deg => [ (cx+r*Math.cos(deg*Math.PI/180)).toFixed(2), (cy+r*Math.sin(deg*Math.PI/180)).toFixed(2) ];
+    const a = p(d0), b = p(d1);
+    out += `<path d="M${a[0]},${a[1]} A${r},${r} 0 0 ${side>0?1:0} ${b[0]},${b[1]}" fill="none" stroke="${col}" stroke-width="1"/>`;
+    for(let i=0;i<8;i++){
+      const deg = 90 + side*(14 + i*10.5);
+      const q = p(deg);
+      const grow = side>0 ? deg+90 : deg-90;
+      const rot = grow + (i%2 ? 30 : -30);
+      out += `<ellipse rx="4.3" ry="1.7" transform="translate(${q[0]} ${q[1]}) rotate(${rot.toFixed(1)}) translate(3.4 0)" fill="${col}" fill-opacity=".85"/>`;
+    }
+  }
+  return out;
+}
 let __stampUid = 0;
 function printStampSvg(stamp){
   const s = stamp || ensureStamp();
@@ -2136,16 +2183,18 @@ function printStampSvg(stamp){
   const esc = escapeHtml;
   const slogan = loopedSloganText(s.slogan);
   const topTxt = s.top || '';
-  const useStars = style !== 'modern';
+  const isPrestige = style === 'prestige', isRosette = style === 'rosette', isEmb = isPrestige || isRosette;
+  const useStars = style !== 'modern' && !isEmb;
   const botTxt = useStars ? `\u2605 ${s.bottom||''} \u2605` : (s.bottom||'');
   const isModern = style === 'modern';
   const font = isModern ? "'Helvetica Neue',Arial,sans-serif" : "Georgia,'Times New Roman',Times,serif";
-  const weight = isModern ? 600 : 900;
-  const top = stampFit(topTxt, isModern ? 12 : 13, isModern ? 2.3 : 1.6, 18);
-  const bot = stampFit(botTxt, isModern ? 10.5 : 11.5, isModern ? 2.4 : 2, 22);
+  const weight = isModern ? 600 : (isEmb ? 800 : 900);
+  const top = isEmb ? stampFit(topTxt, 11.4, 1.7, 21) : stampFit(topTxt, isModern ? 12 : 13, isModern ? 2.3 : 1.6, 18);
+  const bot = isEmb ? stampFit(botTxt, 10.4, 2.1, 24) : stampFit(botTxt, isModern ? 10.5 : 11.5, isModern ? 2.4 : 2, 22);
   const uid = 'sg' + (__stampUid++) + Math.random().toString(36).slice(2,6);
   const idTop = 't'+uid, idBot = 'b'+uid, idMid = 'm'+uid;
   const textR = isModern ? 84 : 80;
+  const rTop = isEmb ? 73.4 : textR, rBot = isEmb ? 81.1 : textR;   /* tèks la santre nan bann nan (anlè kanpe sou liy lan, anba pandye anba li) */
 
   let rings = '', ornament = '', centerExtra = '';
   if(style === 'classic'){
@@ -2161,6 +2210,23 @@ function printStampSvg(stamp){
       <circle cx="100" cy="100" r="56" fill="none" stroke="${col}" stroke-width="1"/>`;
     ornament = stampTickRing(100,100,68,60,60,col)
       + `<path d="${stampStarPath(100,133,4.4,1.9,5)}" fill="${col}" fill-opacity="0.7"/>`;
+  } else if(isPrestige){
+    rings = `
+      <circle cx="100" cy="100" r="97" fill="none" stroke="${col}" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="93.4" fill="none" stroke="${col}" stroke-width="0.7"/>
+      <circle cx="100" cy="100" r="89" fill="none" stroke="${col}" stroke-width="1.1"/>
+      <circle cx="100" cy="100" r="65.5" fill="none" stroke="${col}" stroke-width="1.6"/>`;
+    const sepR = 77.2;
+    ornament = [100-sepR, 100+sepR].map(x=>`<path d="M${x},96.6 L${x+3.4},100 L${x},103.4 L${x-3.4},100 Z" fill="${col}"/>`).join('')
+      + stampLaurel(100,100,54,col);
+  } else if(isRosette){
+    rings = stampScallop(100,100,97.5,48,col) + `
+      <circle cx="100" cy="100" r="91.2" fill="none" stroke="${col}" stroke-width="0.7"/>
+      <circle cx="100" cy="100" r="89" fill="none" stroke="${col}" stroke-width="1.1"/>
+      <circle cx="100" cy="100" r="65.5" fill="none" stroke="${col}" stroke-width="2.2"/>`;
+    const sepR = 77.2;
+    ornament = stampTickRing(100,100,62.5,58,72,col)
+      + [100-sepR, 100+sepR].map(x=>`<circle cx="${x}" cy="100" r="2.4" fill="${col}"/>`).join('');
   } else {
     rings = `
       <circle cx="100" cy="100" r="98" fill="none" stroke="${col}" stroke-width="1"/>
@@ -2170,17 +2236,20 @@ function printStampSvg(stamp){
 
   return `<svg class="p-stamp-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <path id="${idTop}" d="M 20,100 A ${textR},${textR} 0 1 1 180,100"/>
-      <path id="${idBot}" d="M 180,100 A ${textR},${textR} 0 1 1 20,100"/>
+      <path id="${idTop}" d="M ${100-rTop},100 A ${rTop},${rTop} 0 1 1 ${100+rTop},100"/>
+      <path id="${idBot}" d="M ${100-rBot},100 A ${rBot},${rBot} 0 1 0 ${100+rBot},100"/>
       <path id="${idMid}" d="M 100,34 A 66,66 0 1 1 99.99,34.001"/>
     </defs>
     ${rings}
     ${ornament}
     <text font-family="${font}" font-size="${top.size}" font-weight="${weight}" letter-spacing="${top.ls}" fill="${col}"><textPath href="#${idTop}" startOffset="50%" text-anchor="middle">${esc(topTxt)}</textPath></text>
     <text font-family="${font}" font-size="${bot.size}" font-weight="${weight}" letter-spacing="${bot.ls}" fill="${col}"><textPath href="#${idBot}" startOffset="50%" text-anchor="middle">${esc(botTxt)}</textPath></text>
-    ${slogan ? `<text font-family="${font}" font-size="7.2" font-weight="700" letter-spacing="0.8" dominant-baseline="middle" fill="${col}"><textPath href="#${idMid}" startOffset="0%">${esc(slogan)}</textPath></text>` : ''}
+    ${(slogan && !isEmb) ? `<text font-family="${font}" font-size="7.2" font-weight="700" letter-spacing="0.8" dominant-baseline="middle" fill="${col}"><textPath href="#${idMid}" startOffset="0%">${esc(slogan)}</textPath></text>` : ''}
     ${centerExtra}
-    <text x="100" y="112" font-family="${font}" font-size="${isModern?29:32}" font-weight="${weight}" letter-spacing="2" fill="${col}" text-anchor="middle">${esc(s.center||'')}</text>
+    ${isEmb ? `<g transform="translate(100,${isPrestige?72:76}) scale(1.12)">${stampEmblem(col)}</g>
+    <text x="100" y="${isPrestige?118:121}" font-family="${font}" font-size="${(s.center||'').length>3?17:21}" font-weight="800" letter-spacing="2.4" fill="${col}" text-anchor="middle">${esc(s.center||'')}</text>
+    ${s.slogan ? `<text x="100" y="${isPrestige?131:134}" font-family="${font}" font-size="${stampFit(String(s.slogan).toUpperCase(),6.4,0.9,20).size}" font-weight="700" letter-spacing="0.9" fill="${col}" text-anchor="middle">${esc(String(s.slogan).toUpperCase())}</text>` : ''}`
+    : `<text x="100" y="112" font-family="${font}" font-size="${isModern?29:32}" font-weight="${weight}" letter-spacing="2" fill="${col}" text-anchor="middle">${esc(s.center||'')}</text>`}
   </svg>`;
 }
 
@@ -4733,7 +4802,7 @@ async function buyVipPass(me){
 }
 function verifiedBadgeHtml(size){
   const s = size||15;
-  return `<svg class="verified-badge" width="${s}" height="${s}" viewBox="0 0 24 24" fill="#1877F2"><title>Kont verifye</title><path d="M12 2l2.4 1.4 2.7-.4 1.3 2.4 2.4 1.3-.4 2.7L22 12l-1.6 2.4.4 2.7-2.4 1.3-1.3 2.4-2.7-.4L12 22l-2.4-1.6-2.7.4-1.3-2.4-2.4-1.3.4-2.7L2 12l1.6-2.4-.4-2.7 2.4-1.3L6.9 3l2.7.4L12 2z"/><path d="M9.3 12.4l1.9 1.9 3.8-4.1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `<svg class="verified-badge" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><title>Kont verifye</title><path d="M12 2.4 4.6 5.1v6.2c0 4.6 3 8.1 7.4 10.3 4.4-2.2 7.4-5.7 7.4-10.3V5.1Z" fill="#1E3A8A" stroke="#E8A317" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 4.2 6.4 6.2v5.1c0 .6.1 1.2.2 1.7C8 12 10 11.4 12 11.4s4 .6 5.4 1.6c.1-.5.2-1.1.2-1.7V6.2Z" fill="#fff" fill-opacity=".14"/><path d="M8.9 12.3l2.2 2.2 4-4.3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function isOwner(){
   const u = (typeof fbAuth!=='undefined' && fbAuth) ? fbAuth.currentUser : null;
@@ -6085,6 +6154,54 @@ function tabPalmares(cls){
 }
 
 /* ===================== FICH ELÈV ===================== */
+function editStudentModal(cls, st){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.className = 'dlg-overlay';
+    overlay.innerHTML = `
+      <div class="dlg-box se-box" role="dialog" aria-modal="true">
+        <div class="dlg-title" style="font-size:17px;margin-bottom:14px">Modifye enfòmasyon elèv la</div>
+        <div class="field"><label>Non konplè elèv la</label><input id="se-name" maxlength="120"></div>
+        <div class="field"><label>Matrikil</label><input id="se-matricule" maxlength="40"></div>
+        <div class="field"><label>Sèks</label><select id="se-sexe"><option value="">—</option><option value="M">Gason</option><option value="F">Fi</option></select></div>
+        <div class="field"><label>Dat nesans</label><input id="se-dob" type="date"></div>
+        <div class="dlg-actions">
+          <button type="button" class="dlg-btn dlg-btn-cancel" data-se="cancel">Anile</button>
+          <button type="button" class="dlg-btn dlg-btn-ok" data-se="ok">Sove</button>
+        </div>
+      </div>`;
+    const q = id => overlay.querySelector('#'+id);
+    q('se-name').value = st.name || '';
+    q('se-matricule').value = st.matricule || '';
+    q('se-sexe').value = st.sexe || '';
+    q('se-dob').value = st.dob || '';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(()=>overlay.classList.add('dlg-show'));
+    const finish = v=>{
+      overlay.classList.remove('dlg-show');
+      setTimeout(()=>overlay.remove(), 140);
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    };
+    const onKey = e=>{ if(e.key==='Escape') finish(false); };
+    document.addEventListener('keydown', onKey);
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) finish(false); });
+    overlay.querySelector('[data-se="cancel"]').addEventListener('click', ()=>finish(false));
+    overlay.querySelector('[data-se="ok"]').addEventListener('click', async ()=>{
+      const name = q('se-name').value.trim();
+      const matricule = q('se-matricule').value.trim();
+      if(!name){ await showAlert('Non elèv la pa ka vid.'); return; }
+      const dup = cls.students.some(o=> o.id!==st.id && (
+        normSearch(o.name)===normSearch(name) ||
+        (matricule && o.matricule && normSearch(o.matricule)===normSearch(matricule))
+      ));
+      if(dup && !await showConfirm('Yon lòt elèv ki sanble ak sa a egziste deja nan klas la. Ou vle kontinye?')) return;
+      st.name = name; st.matricule = matricule; st.sexe = q('se-sexe').value; st.dob = q('se-dob').value;
+      finish(true);
+    });
+    setTimeout(()=>{ try{ q('se-name').focus(); }catch(e){} }, 60);
+  });
+}
 function tabFiche(cls){
   if(cls.students.length===0) return `<div class="card"><div class="empty-state">Ajoute omwen yon elèv anvan w gade fich yo.</div></div>`;
   const sid = ui.ficheStudentId && cls.students.some(s=>s.id===ui.ficheStudentId) ? ui.ficheStudentId : cls.students[0].id;
@@ -6120,6 +6237,7 @@ function tabFiche(cls){
         <div class="fiche-name">${escapeHtml(st.name)}</div>
         <div class="fiche-meta">${escapeHtml(cls.name)} · Kòd klas ${cls.code}</div>
       </div>
+      <button type="button" class="fiche-edit-btn" id="fiche-edit" title="Modifye enfòmasyon elèv la" aria-label="Modifye enfòmasyon elèv la">${ICONS.pencil}</button>
     </div>
     <div class="fiche-grid">
       <div class="fiche-stat"><div class="fv">${escapeHtml(st.matricule||'—')}</div><div class="fl">Matrikil</div></div>
@@ -6939,16 +7057,42 @@ function renderDocModern(cls, st, title, body, colorId, fontId){
       </div>
     </div>`;
 }
+/* ---- Eleman ornman pataje pou dokiman yo (menm lang vizyèl ak kachèt Meda : liv + etwal + lorye) ---- */
+const _DP = 'var(--doc-primary,#16233F)', _DA = 'var(--doc-accent,#C9A227)';
+function docScallopD(cx, cy, R, n){
+  const r = (2*R*Math.sin(Math.PI/n))/2;
+  let d = '';
+  for(let i=0;i<=n;i++){
+    const a = (i/n)*2*Math.PI;
+    const x = (cx+R*Math.cos(a)).toFixed(2), y = (cy+R*Math.sin(a)).toFixed(2);
+    d += i===0 ? `M${x},${y}` : ` A${r.toFixed(2)},${r.toFixed(2)} 0 0 1 ${x},${y}`;
+  }
+  return d+'Z';
+}
+function docEmblem(x, y, sc, col){ return `<g transform="translate(${x} ${y}) scale(${sc})">${stampEmblem(col)}</g>`; }
+function docLaurelRing(cx, cy, r, col){ return `<g transform="translate(${cx} ${cy}) scale(${(r/50).toFixed(3)}) translate(-100 -100)">${stampLaurel(100,100,50,col)}</g>`; }
+function docShine(uid, cx, cy, r){
+  return `<radialGradient id="${uid}" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${uid})"/>`;
+}
+function docTails(cx, top, len, fill, stripe, w){
+  w = w||14;
+  const L = [[cx-w-3,top],[cx-3,top],[cx-3-w*0.4,top+len],[cx-w*0.95-3,top+len-8],[cx-w*1.5-3,top+len]];
+  const R = L.map(p=>[2*cx-p[0],p[1]]);
+  const pts = a=>a.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  return `<polygon points="${pts(L)}" fill="${fill}"/><polygon points="${pts(R)}" fill="${fill}"/>`
+    + (stripe ? `<path d="M${cx-w*0.62-3},${top} L${cx-w*1.0-3},${top+len-9} M${cx+w*0.62+3},${top} L${cx+w*1.0+3},${top+len-9}" stroke="${stripe}" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>` : '');
+}
 /* ---- Ti medayon SVG orijinal (riban + wozèt) pou modèl DÉCORATIF la —
    koulè a swiv --doc-primary/--doc-accent, kidonk li chanje ak tèm koulè a. ---- */
 function decoratifMedalSvg(){
+  const sh = docUid('sh');
   return `<svg viewBox="0 0 64 88" width="64" height="88" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20 40 L8 84 L32 72 L56 84 L44 40 Z" fill="var(--doc-primary,#16233F)"/>
-    <path d="M24 40 L15 78 L32 68 L32 40 Z" fill="var(--doc-accent,#C9A227)" opacity=".55"/>
-    <circle cx="32" cy="30" r="27" fill="var(--doc-accent,#C9A227)"/>
-    <circle cx="32" cy="30" r="27" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="2"/>
-    <circle cx="32" cy="30" r="20" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="1" stroke-dasharray="3 3"/>
-    <path d="M32 16 L34.8 23.5 L42.7 24 L36.5 29 L38.6 36.8 L32 32.4 L25.4 36.8 L27.5 29 L21.3 24 L29.2 23.5 Z" fill="var(--doc-primary,#16233F)"/>
+    ${docTails(32,44,42,_DP,_DA,13)}
+    <path d="${docScallopD(32,30,27.5,22)}" fill="${_DA}" stroke="${_DP}" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="32" cy="30" r="22" fill="none" stroke="${_DP}" stroke-width="1"/>
+    <circle cx="32" cy="30" r="19.5" fill="${_DP}" fill-opacity=".08" stroke="${_DP}" stroke-width=".6" stroke-dasharray="1.2 2"/>
+    ${docEmblem(32,27,.55,_DP)}
+    ${docShine(sh,32,30,26)}
   </svg>`;
 }
 /* ---- Modèle 4 : DÉCORATIF — medayon, riban ak kad ònmantal, style onè/seremoni ---- */
@@ -6999,12 +7143,13 @@ function renderOfficialDocHtml(cls, st, title, body, templateId, colorId, fontId
 }
 /* ---- Modèle 5 : CADRE DORÉ — bordure ornementale, titre calligraphié, cachet rond ---- */
 function dorSealSvg(){
+  const sh = docUid('sh');
   return `<svg viewBox="0 0 70 70" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="35" cy="35" r="32" fill="var(--doc-accent,#C9A227)"/>
-    <circle cx="35" cy="35" r="32" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="1.5"/>
-    <circle cx="35" cy="35" r="25" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="1" stroke-dasharray="2 3"/>
-    <path d="M35 14 L37.6 20.8 L44.9 21.2 L39.2 25.8 L41.2 32.8 L35 28.8 L28.8 32.8 L30.8 25.8 L25.1 21.2 L32.4 20.8 Z" fill="var(--doc-primary,#16233F)"/>
-    <text x="35" y="48" text-anchor="middle" font-size="7" font-family="Georgia,serif" fill="var(--doc-primary,#16233F)" letter-spacing="1">CACHET</text>
+    <path d="${docScallopD(35,35,32.5,24)}" fill="${_DA}" stroke="${_DP}" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="35" cy="35" r="26" fill="none" stroke="${_DP}" stroke-width="1.2"/>
+    <circle cx="35" cy="35" r="23.2" fill="none" stroke="${_DP}" stroke-width=".7" stroke-dasharray="1.2 2.2"/>
+    ${docEmblem(35,33,.66,_DP)}
+    ${docShine(sh,35,35,30)}
   </svg>`;
 }
 function renderDocDore(cls, st, title, body, colorId, fontId){
@@ -7051,13 +7196,14 @@ function renderDocMinimaliste(cls, st, title, body, colorId, fontId){
 /* ---- Modèle 7 : BADGE LATÉRAL — kat awondi, ankadre ID/dat, badge sikilè sou kote ---- */
 function corporateBadgeSvg(labelTop, labelBottom){
   return `<svg viewBox="0 0 100 130" width="72" height="94" xmlns="http://www.w3.org/2000/svg">
-    <path d="M50 10 L58 55 L88 60 L58 65 L50 110 L42 65 L12 60 L42 55 Z" fill="var(--doc-primary,#16233F)" opacity=".18"/>
-    <circle cx="50" cy="48" r="34" fill="var(--doc-primary,#16233F)"/>
-    <circle cx="50" cy="48" r="34" fill="none" stroke="var(--doc-accent,#C9A227)" stroke-width="3"/>
-    <circle cx="50" cy="48" r="26" fill="none" stroke="var(--doc-accent,#C9A227)" stroke-width="1" stroke-dasharray="2 3"/>
-    <text x="50" y="44" text-anchor="middle" font-size="9" font-weight="700" font-family="Arial,sans-serif" fill="#fff">${escapeHtml(labelTop)}</text>
-    <text x="50" y="58" text-anchor="middle" font-size="10" font-weight="700" font-family="Arial,sans-serif" fill="var(--doc-accent,#C9A227)">${escapeHtml(labelBottom)}</text>
-    <path d="M32 78 L38 118 L50 106 L62 118 L68 78 Z" fill="var(--doc-primary,#16233F)"/>
+    ${docTails(50,72,52,_DP,_DA,15)}
+    <circle cx="50" cy="48" r="38" fill="none" stroke="${_DA}" stroke-width=".9"/>
+    <circle cx="50" cy="48" r="34" fill="${_DP}"/>
+    <circle cx="50" cy="48" r="34" fill="none" stroke="${_DA}" stroke-width="3"/>
+    <circle cx="50" cy="48" r="29.5" fill="none" stroke="${_DA}" stroke-width=".8" stroke-dasharray="1.5 2.6"/>
+    ${docLaurelRing(50,48,25,_DA)}
+    <text x="50" y="43" text-anchor="middle" font-size="9" font-weight="700" font-family="Arial,sans-serif" letter-spacing=".6" fill="#fff">${escapeHtml(labelTop)}</text>
+    <text x="50" y="56" text-anchor="middle" font-size="10" font-weight="700" font-family="Arial,sans-serif" fill="${_DA}">${escapeHtml(labelBottom)}</text>
   </svg>`;
 }
 function renderDocCorporate(cls, st, title, body, colorId, fontId){
@@ -7086,12 +7232,13 @@ function renderDocCorporate(cls, st, title, body, colorId, fontId){
 }
 /* ---- Modèle 8 : DIAGONALE — triyang koulè nan kwen yo, riban dore, style dinamik ---- */
 function diagonalRibbonSvg(){
+  const sh = docUid('sh');
   return `<svg viewBox="0 0 60 78" width="46" height="60" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 34 L4 74 L30 62 L56 74 L46 34 Z" fill="#fff" opacity=".92"/>
-    <circle cx="30" cy="26" r="24" fill="var(--doc-accent,#C9A227)"/>
-    <circle cx="30" cy="26" r="24" fill="none" stroke="#fff" stroke-width="2"/>
-    <circle cx="30" cy="26" r="18" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="2 2"/>
-    <path d="M30 14 L32.4 20.8 L39.6 21.2 L34 25.6 L36 32.6 L30 28.6 L24 32.6 L26 25.6 L20.4 21.2 L27.6 20.8 Z" fill="#fff"/>
+    ${docTails(30,40,36,'#fff',_DA,11)}
+    <path d="${docScallopD(30,26,24.5,20)}" fill="${_DA}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="30" cy="26" r="19" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.4 2.2"/>
+    ${docEmblem(30,24,.5,'#fff')}
+    ${docShine(sh,30,26,23)}
   </svg>`;
 }
 function renderDocDiagonal(cls, st, title, body, colorId, fontId){
@@ -7281,13 +7428,23 @@ function renderDocMosaique(cls, st, title, body, colorId, fontId){
 }
 /* ---- Branch lorye SVG (estanp + fèy), gòch oswa dwat ---- */
 function laurelBranchSvg(mirror){
+  /* Branch lorye natirèl : yon tij koube ak pè fèy ki pi piti vè anlè, ak ti grenn nan bout la */
+  const P0=[20,4], C=[4,50], P2=[20,96];
   let leaves = '';
-  for(let i=0;i<6;i++){
-    const y = 8+i*14, rot = -18+i*4;
-    leaves += `<ellipse cx="18" cy="${y}" rx="9" ry="4" fill="var(--doc-accent,#C9A227)" transform="rotate(${rot} 18 ${y})"/>`;
+  for(let i=0;i<9;i++){
+    const t = 0.07 + i*0.105;
+    const x = (1-t)*(1-t)*P0[0] + 2*(1-t)*t*C[0] + t*t*P2[0];
+    const y = (1-t)*(1-t)*P0[1] + 2*(1-t)*t*C[1] + t*t*P2[1];
+    const dx = 2*(1-t)*(C[0]-P0[0]) + 2*t*(P2[0]-C[0]);
+    const dy = 2*(1-t)*(C[1]-P0[1]) + 2*t*(P2[1]-C[1]);
+    const ang = Math.atan2(-dy,-dx)*180/Math.PI;
+    const sc = (0.72 + 0.4*t).toFixed(2);
+    [-1,1].forEach(side=>{
+      leaves += `<path d="M0,0 C3,-2.7 8.2,-2.7 11.5,0 C8.2,2.7 3,2.7 0,0Z" fill="${_DA}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(ang+side*42).toFixed(1)}) scale(${sc})"/>`;
+    });
   }
   const g = mirror ? 'transform="scale(-1,1) translate(-40,0)"' : '';
-  return `<svg viewBox="0 0 40 100" width="30" height="76" xmlns="http://www.w3.org/2000/svg"><g ${g}><path d="M20,4 Q4,50 20,96" stroke="var(--doc-primary,#16233F)" stroke-width="2" fill="none"/>${leaves}</g></svg>`;
+  return `<svg viewBox="0 0 40 100" width="30" height="76" xmlns="http://www.w3.org/2000/svg"><g ${g}><path d="M20,4 Q4,50 20,96" stroke="${_DP}" stroke-width="1.8" fill="none" stroke-linecap="round"/>${leaves}<circle cx="20" cy="3.2" r="2.2" fill="${_DP}"/></g></svg>`;
 }
 /* ---- Modèle 13 : COURONNE DE LAURIER — style onè akademik klasik ---- */
 function renderDocLaurier(cls, st, title, body, colorId, fontId){
@@ -7343,17 +7500,18 @@ function renderDocBandeau(cls, st, title, body, colorId, fontId){
 }
 /* ---- Badj/sceau SVG an degrade, ak riban anba ---- */
 function sceauBadgeSvg(){
-  const uid = docUid('sc');
+  const uid = docUid('sc'), sh = docUid('sh');
   return `<svg viewBox="0 0 120 150" width="82" height="102" xmlns="http://www.w3.org/2000/svg">
     <defs><linearGradient id="${uid}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" style="stop-color:var(--doc-primary,#16233F)"/>
       <stop offset="100%" style="stop-color:var(--doc-accent,#C9A227)"/>
     </linearGradient></defs>
-    <path d="M40,70 L28,140 L60,120 L92,140 L80,70 Z" fill="url(#${uid})"/>
-    <circle cx="60" cy="50" r="46" fill="url(#${uid})"/>
-    <circle cx="60" cy="50" r="46" fill="none" stroke="#fff" stroke-width="3"/>
-    <circle cx="60" cy="50" r="35" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="3 4"/>
-    <path d="M60,26 L65,42 L82,43 L68,53 L73,70 L60,60 L47,70 L52,53 L38,43 L55,42 Z" fill="#fff"/>
+    ${docTails(60,76,68,'url(#'+uid+')','#fff',19)}
+    <path d="${docScallopD(60,50,47,30)}" fill="url(#${uid})" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="60" cy="50" r="38.5" fill="none" stroke="#fff" stroke-width="1.6"/>
+    <circle cx="60" cy="50" r="34.5" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.6 3"/>
+    ${docEmblem(60,45,1.0,'#fff')}
+    ${docShine(sh,60,50,46)}
   </svg>`;
 }
 /* ---- Modèle 15 : SCEAU CENTRAL — gwo medayon degrade, style seremonyèl ---- */
@@ -7383,14 +7541,19 @@ function printOfficialDocument(cls, st, title, body, templateId, colorId, fontId
 }
 /* ---- Blason SVG pou modèl PRESTIGE — STYLE UNIVERSITÉ ---- */
 function univCrestSvg(){
-  const uid = docUid('un');
+  const uid = docUid('un'), sh = docUid('sh');
+  const shield = 'M50,4 L90,18 L90,58 C90,90 72,108 50,116 C28,108 10,90 10,58 L10,18 Z';
   return `<svg viewBox="0 0 100 120" width="66" height="80" xmlns="http://www.w3.org/2000/svg">
     <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" style="stop-color:var(--doc-primary,#16233F)"/>
       <stop offset="100%" style="stop-color:var(--doc-accent,#C9A227)"/>
-    </linearGradient></defs>
-    <path d="M50,4 L90,18 L90,58 C90,90 72,108 50,116 C28,108 10,90 10,58 L10,18 Z" fill="url(#${uid})" stroke="#1a1a1a" stroke-width="2"/>
-    <path d="M50,30 L57,50 L78,52 L61,64 L67,85 L50,73 L33,85 L39,64 L22,52 L43,50 Z" fill="#fff"/>
+    </linearGradient>
+    <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    <path d="${shield}" fill="url(#${uid})" stroke="${_DP}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="${shield}" fill="none" stroke="#fff" stroke-width="1.2" transform="translate(50 60) scale(.86) translate(-50 -60)"/>
+    ${docEmblem(50,46,1.22,'#fff')}
+    <path d="M32,92 L50,100 L68,92" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${shield}" fill="url(#${sh})"/>
   </svg>`;
 }
 /* ---- Modèle 16 : PRESTIGE — STYLE UNIVERSITÉ — kad epè, blason, tèks solid ---- */
@@ -7418,17 +7581,24 @@ function renderDocUniversite(cls, st, title, body, colorId, fontId){
 }
 /* ---- Ekison kwadriye SVG pou modèl PRESTIGE — BLASON HÉRALDIQUE ---- */
 function heraldShieldSvg(){
-  const uid = docUid('hd');
+  const uid = docUid('hd'), sh = docUid('sh');
+  const shield = 'M50,4 L92,16 L92,54 C92,86 74,104 50,114 C26,104 8,86 8,54 L8,16 Z';
   return `<svg viewBox="0 0 100 118" width="70" height="82" xmlns="http://www.w3.org/2000/svg">
-    <clipPath id="${uid}"><path d="M50,4 L92,16 L92,54 C92,86 74,104 50,114 C26,104 8,86 8,54 L8,16 Z"/></clipPath>
+    <clipPath id="${uid}"><path d="${shield}"/></clipPath>
+    <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <g clip-path="url(#${uid})">
-      <rect x="0" y="0" width="50" height="59" fill="var(--doc-primary,#16233F)"/>
-      <rect x="50" y="0" width="50" height="59" fill="var(--doc-accent,#C9A227)"/>
-      <rect x="0" y="59" width="50" height="59" fill="var(--doc-accent,#C9A227)"/>
-      <rect x="50" y="59" width="50" height="59" fill="var(--doc-primary,#16233F)"/>
+      <rect x="0" y="0" width="50" height="59" fill="${_DP}"/>
+      <rect x="50" y="0" width="50" height="59" fill="${_DA}"/>
+      <rect x="0" y="59" width="50" height="59" fill="${_DA}"/>
+      <rect x="50" y="59" width="50" height="59" fill="${_DP}"/>
+      <path d="${stampStarPath(29,30,11,4.6,5)}" fill="${_DA}"/>
+      ${docEmblem(71,27,.5,_DP)}
+      <g stroke="${_DP}" stroke-width="2" fill="none" stroke-linecap="round"><path d="M22,80 Q29,70 36,80 M22,92 Q29,82 36,92"/></g>
+      <circle cx="71" cy="82" r="9" fill="none" stroke="${_DA}" stroke-width="2"/><circle cx="71" cy="82" r="2.8" fill="${_DA}"/>
+      <path d="${shield}" fill="url(#${sh})"/>
     </g>
-    <path d="M50,4 L92,16 L92,54 C92,86 74,104 50,114 C26,104 8,86 8,54 L8,16 Z" fill="none" stroke="#1a1a1a" stroke-width="3"/>
-    <path d="M50,34 L57,50 L74,52 L61,63 L65,80 L50,71 L35,80 L39,63 L26,52 L43,50 Z" fill="#fff" stroke="#1a1a1a" stroke-width="1"/>
+    <path d="${shield}" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/>
+    <path d="${shield}" fill="none" stroke="#fff" stroke-width=".9" transform="translate(50 60) scale(.93) translate(-50 -60)" opacity=".8"/>
   </svg>`;
 }
 /* ---- Modèle 17 : PRESTIGE — BLASON HÉRALDIQUE — ekison, riban, kad nwa epè ---- */
@@ -7455,10 +7625,13 @@ function renderDocHeraldique(cls, st, title, body, colorId, fontId){
 /* ---- Sceau protocolaire SVG (jeneral, pa lye ak okenn peyi/ekison reyèl) ---- */
 function diploSealSvg(){
   return `<svg viewBox="0 0 100 100" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="46" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="2"/>
-    <circle cx="50" cy="50" r="38" fill="none" stroke="var(--doc-accent,#C9A227)" stroke-width="1" stroke-dasharray="2 3"/>
-    <circle cx="50" cy="50" r="30" fill="var(--doc-primary,#16233F)"/>
-    <path d="M50 24 L55 42 L74 44 L59 55 L64 74 L50 63 L36 74 L41 55 L26 44 L45 42 Z" fill="var(--doc-accent,#C9A227)"/>
+    <circle cx="50" cy="50" r="47" fill="none" stroke="${_DP}" stroke-width="1.8"/>
+    <circle cx="50" cy="50" r="43.5" fill="none" stroke="${_DP}" stroke-width=".7"/>
+    ${stampTickRing(50,50,42,37,64,_DA).replace(/stroke-width="0.8" stroke-opacity="0.5"/g,'stroke-width="1" stroke-opacity="1"')}
+    <circle cx="50" cy="50" r="34" fill="none" stroke="${_DA}" stroke-width="1.2"/>
+    <circle cx="50" cy="50" r="31" fill="${_DP}"/>
+    ${docLaurelRing(50,52,24.5,_DA)}
+    ${docEmblem(50,43,.55,_DA)}
   </svg>`;
 }
 /* ---- Modèle 18 : INTERNATIONAL — STYLE DIPLOMATIQUE — sceau protocolaire, kad double liseré, style dokiman d'État ---- */
@@ -7487,13 +7660,20 @@ function renderDocDiplomatique(cls, st, title, body, colorId, fontId){
 }
 /* ---- Blason SVG estil kolejyal anglo-sakson (jeneral, pa lye ak okenn inivèsite reyèl) ---- */
 function oxbridgeCrestSvg(){
+  const sh = docUid('sh');
+  const shield = 'M45,4 L82,14 L82,50 C82,80 66,96 45,106 C24,96 8,80 8,50 L8,14 Z';
   return `<svg viewBox="0 0 90 110" width="60" height="74" xmlns="http://www.w3.org/2000/svg">
-    <path d="M45,4 L82,14 L82,50 C82,80 66,96 45,106 C24,96 8,80 8,50 L8,14 Z" fill="var(--doc-primary,#16233F)" stroke="var(--doc-accent,#C9A227)" stroke-width="2"/>
-    <path d="M45,20 L45,90" stroke="var(--doc-accent,#C9A227)" stroke-width="2"/>
-    <path d="M20,55 L70,55" stroke="var(--doc-accent,#C9A227)" stroke-width="2"/>
-    <circle cx="45" cy="38" r="8" fill="var(--doc-accent,#C9A227)"/>
-    <circle cx="30" cy="70" r="6" fill="#fff" opacity=".9"/>
-    <circle cx="60" cy="70" r="6" fill="#fff" opacity=".9"/>
+    <linearGradient id="${sh}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <path d="${shield}" fill="${_DP}" stroke="${_DA}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="${shield}" fill="none" stroke="${_DA}" stroke-width=".8" transform="translate(45 56) scale(.88) translate(-45 -56)"/>
+    <path d="M45,18 L45,94" stroke="${_DA}" stroke-width="1.6"/>
+    <path d="M18,52 L72,52" stroke="${_DA}" stroke-width="1.6"/>
+    ${docEmblem(28,34,.42,_DA)}
+    <path d="${stampStarPath(62,32,7,3,5)}" fill="${_DA}"/>
+    <path d="${stampStarPath(28,70,7,3,5)}" fill="${_DA}"/>
+    ${docEmblem(62,66,.42,_DA)}
+    <circle cx="45" cy="52" r="5" fill="${_DP}" stroke="${_DA}" stroke-width="1.4"/>
+    <path d="${shield}" fill="url(#${sh})"/>
   </svg>`;
 }
 /* ---- Modèle 19 : INTERNATIONAL — STYLE COLLÉGIAL (OXBRIDGE) — bandeaux koulè kay, blason, devise laten ---- */
@@ -7522,10 +7702,13 @@ function renderDocOxbridge(cls, st, title, body, colorId, fontId){
 }
 /* ---- Badj konfòmite SVG (chèk nan yon wonn, style aksreditasyon entènasyonal) ---- */
 function conformityBadgeSvg(){
+  const sh = docUid('sh');
   return `<svg viewBox="0 0 80 80" width="56" height="56" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="40" cy="40" r="36" fill="var(--doc-accent,#C9A227)"/>
-    <circle cx="40" cy="40" r="36" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="2"/>
-    <path d="M24 41 L34 51 L57 27" fill="none" stroke="var(--doc-primary,#16233F)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${docScallopD(40,40,36.5,22)}" fill="${_DA}" stroke="${_DP}" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="40" cy="40" r="29" fill="none" stroke="${_DP}" stroke-width="1" stroke-dasharray="1.4 2.4"/>
+    <circle cx="40" cy="40" r="23" fill="${_DP}"/>
+    <path d="M29.5 40.5 L37 48 L51 32" fill="none" stroke="${_DA}" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${docShine(sh,40,40,35)}
   </svg>`;
 }
 /* ---- Ti bare dekoratif (pa yon vrè kòd-ba, sèlman yon fini vizyèl) ---- */
@@ -8892,6 +9075,17 @@ function wireClassManager(cls, role){
     if(ft) ft.addEventListener('change', ()=>{ ui.term = ft.value; role==='admin'? render('admin') : render('teacher'); });
     const pf = document.getElementById('print-fiche');
     if(pf) pf.addEventListener('click', ()=> printFiche(cls, ui.term||DATA.terms[0], ui.ficheStudentId));
+    const fe = document.getElementById('fiche-edit');
+    if(fe) fe.addEventListener('click', async ()=>{
+      const st = cls.students.find(x=>x.id===ui.ficheStudentId);
+      if(!st) return;
+      const changed = await editStudentModal(cls, st);
+      if(!changed) return;
+      role==='admin' ? render('admin') : render('teacher');
+      const ok = await saveData();
+      if(ok === false) await showAlert('Enfòmasyon yo chanje sou aparèy la men yo pa t kapab sove sou sèvè a. Verifye entènèt ou epi eseye ankò.');
+      else showToast({ title:'Enfòmasyon elèv la sove', message:st.name, duration:2500 });
+    });
     const photoInput = document.getElementById('fiche-photo-input');
     if(photoInput) photoInput.addEventListener('change', async e=>{
       const file = e.target.files && e.target.files[0];
