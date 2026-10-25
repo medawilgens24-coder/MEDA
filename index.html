@@ -1275,7 +1275,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.50';
+const APP_VERSION = '2.26.10.52';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2716,7 +2716,16 @@ async function loadDataAtPath(path){
   if(FIREBASE_ENABLED && fbDb){
     try{
       const snap = await fbDb.ref(path).get();
-      return snap.exists() ? snap.val() : null;
+      const val = snap.exists() ? snap.val() : null;
+      if(val && typeof val==='object'){
+        try{
+          const pnode = val.photos || {};
+          delete val.photos;
+          const legacy = _mergePhotos(val, pnode);
+          _photoLoad = { path, map: pnode, legacy };
+        }catch(e){ console.error('Foto yo pa ka remèt', e); }
+      }
+      return val;
     }catch(e){ console.error('Erè Firebase pandan lekti done yo', e); return null; }
   }
   try{
@@ -2808,12 +2817,103 @@ window.addEventListener('pagehide', gradeFlushDirty);
      epi rele debounceSave(el, ()=>saveData(), 10)  — pa janm tann plis pase 10 ms.
    ===================================================================== */
 const SAVE_WAIT_MS = 10;   /* regl 10 ms: app la pa tann sèvè a — paj la rann touswit, sovgad la fini dèyè */
-const _SAVE = { ref:null, path:null, snap:null, msgJson:null, pending:0, seq:0, applied:0 };
+const _SAVE = { photos:{}, ref:null, path:null, snap:null, msgJson:null, pending:0, seq:0, applied:0 };
 function _cloneShare(v){
   if(v===null || typeof v!=='object') return v;
   if(Array.isArray(v)){ const a = new Array(v.length); for(let i=0;i<v.length;i++) a[i] = _cloneShare(v[i]); return a; }
   const o = {}; for(const k in v) o[k] = _cloneShare(v[k]); return o;
 }
+/* ===================== FOTO APART (pa nan menm kote ak nòt yo) =====================
+   Foto yo (elèv, pwofesè, admin, logo, kachèt) rete nan DATA kòm avan (rès kòd la pa chanje),
+   men sou Firebase yo sove nan yon kote apa : <lekòl>/photos/<chan>__<id>. Sa fè done prensipal yo lejè
+   epi evite sove menm foto a de fwa (klas yo + ane akademik la). Ansyen foto ki te anndan done yo
+   deplase otomatikman apre premye chajman an. */
+const PHOTO_MIN = 1500;
+function _isImgData(v){ return typeof v==='string' && v.length>PHOTO_MIN && v.indexOf('data:image')===0; }
+function _photoKey(field, owner){ return (field+'__'+owner).replace(/[.#$\[\]\/]/g,'_'); }
+function _photoChildOwner(own, isIdObj, k){
+  if(isIdObj) return null;
+  if(own && own.charAt(0)==='@') return (own==='@' ? '@'+k : own+'_'+k);
+  return null;
+}
+/* Kopi done san foto yo ; foto yo rasanble nan `map` */
+function _stripClone(v, owner, map){
+  if(v===null || typeof v!=='object') return v;
+  if(Array.isArray(v)){ const a = new Array(v.length); for(let i=0;i<v.length;i++) a[i] = _stripClone(v[i], null, map); return a; }
+  const isId = (typeof v.id==='string' && v.id.length>0);
+  const own = isId ? v.id : owner;
+  const o = {};
+  for(const k in v){
+    const x = v[k];
+    if(own && _isImgData(x)){ map[_photoKey(k, own)] = x; continue; }
+    o[k] = (x!==null && typeof x==='object') ? _stripClone(x, _photoChildOwner(own, false, k), map) : x;
+  }
+  return o;
+}
+/* Apre chajman : remèt foto yo nan objè yo epi note ansyen foto ki rete anndan done yo (pou netwaye) */
+function _mergePhotos(root, photoNode){
+  const idx = {};
+  Object.keys(photoNode||{}).forEach(key=>{
+    const p = key.indexOf('__'); if(p<1) return;
+    const field = key.slice(0,p), owner = key.slice(p+2);
+    (idx[owner] || (idx[owner]=[])).push([field, photoNode[key]]);
+  });
+  const legacy = [];
+  const walk = (v, owner, path)=>{
+    if(v===null || typeof v!=='object') return;
+    if(Array.isArray(v)){ v.forEach((x,i)=>walk(x, null, path+'/'+i)); return; }
+    const isId = (typeof v.id==='string' && v.id.length>0);
+    const own = isId ? v.id : owner;
+    const sk = own ? _photoOwnerSan(own) : null;
+    if(own){ for(const k in v){ if(_isImgData(v[k])) legacy.push(path+'/'+k); } }   /* ansyen foto anndan done yo — AVAN fizyon an */
+    if(sk && idx[sk]) idx[sk].forEach(([f,val])=>{ if(!_isImgData(v[f]) && typeof val==='string') v[f] = val; });
+    for(const k in v){
+      const x = v[k];
+      if(x!==null && typeof x==='object') walk(x, _photoChildOwner(own, false, k), path+'/'+k);
+    }
+  };
+  /* rasin an ; pa manyen messages/typing/pushQueue/pushTokens/photos */
+  const skip = {messages:1, typing:1, pushQueue:1, pushTokens:1, photos:1};
+  walk0(root);
+  function walk0(r){
+    if(!r || typeof r!=='object') return;
+    for(const k in r){ if(!skip[k] && _isImgData(r[k])) legacy.push(k); }
+    const sk = idx['@'];
+    if(sk) sk.forEach(([f,val])=>{ if(!_isImgData(r[f]) && typeof val==='string') r[f] = val; });
+    for(const k in r){
+      if(skip[k]) continue;
+      const x = r[k];
+      if(x!==null && typeof x==='object') walk(x, _photoChildOwner('@', false, k), k);
+    }
+  }
+  return legacy;
+}
+function _photoOwnerSan(own){ return own.replace(/[.#$\[\]\/]/g,'_'); }
+function _photoDiffInto(prev, next, out){
+  prev = prev||{}; next = next||{};
+  Object.keys(next).forEach(k=>{ if(prev[k]!==next[k]) out['photos/'+k] = next[k]; });
+  Object.keys(prev).forEach(k=>{ if(!(k in next)) out['photos/'+k] = null; });
+}
+let _photoMigrating = false;
+function _photoMigrateSoon(pm){
+  const pl = _photoLoad;
+  if(!pl || !pl.legacy || !pl.legacy.length || pl.path!==schoolDataRefPath() || _photoMigrating) return;
+  _photoMigrating = true;
+  setTimeout(async ()=>{
+    try{
+      const out = {};
+      _photoDiffInto(pl.map||{}, pm, out);
+      Object.keys(out).forEach(k=>{ if(out[k]===null) delete out[k]; });   /* migrasyon pa efase okenn foto */
+      pl.legacy.forEach(p=>{ out[p] = null; });
+      await withTimeout(fbDb.ref(pl.path).update(out), 60000);
+      pl.legacy = [];
+      _SAVE.photos = Object.assign({}, pl.map||{}, pm);
+    }catch(e){ console.warn('Migrasyon foto yo reprann pita', e); }
+    _photoMigrating = false;
+  }, 1500);
+}
+let _photoLoad = null;   /* { path, map, legacy } — rezilta dènye chajman an */
+
 function _restOf(d){ const r = Object.assign({}, d); delete r.messages; delete r.typing; delete r.pushQueue; delete r.pushTokens; return r; }
 function _kindOf(v){ return (v===undefined || v===null) ? 'nil' : (Array.isArray(v) ? 'arr' : (typeof v==='object' ? 'obj' : 'prim')); }
 function _cleanVal(v){ return (v!==null && typeof v==='object') ? JSON.parse(JSON.stringify(v)) : v; }
@@ -2832,7 +2932,10 @@ function _saveSnapInit(){
   try{
     if(!(FIREBASE_ENABLED && fbDb) || !DATA) return;
     _SAVE.ref = DATA; _SAVE.path = schoolDataRefPath();
-    _SAVE.snap = _cloneShare(_restOf(DATA));
+    const pm = {};
+    _SAVE.snap = _stripClone(_restOf(DATA), '@', pm);
+    _SAVE.photos = (_photoLoad && _photoLoad.path===_SAVE.path) ? (_photoLoad.map||{}) : {};
+    _photoMigrateSoon(pm);
     _SAVE.msgJson = JSON.stringify(DATA.messages || null);
   }catch(e){ _SAVE.snap = null; }
 }
@@ -2853,7 +2956,8 @@ async function _saveDataOnce(){
   const dot = document.getElementById('conn-status');
   try{
     if(FIREBASE_ENABLED && fbDb){
-      const rest = _restOf(DATA);
+      const photoMap = {};
+      const rest = _stripClone(_restOf(DATA), '@', photoMap);
       const path = schoolDataRefPath();
       const ref = fbDb.ref(path);
       const jobs = [];
@@ -2863,14 +2967,15 @@ async function _saveDataOnce(){
       if(canDiff){
         const out = {};
         _diffInto(_SAVE.snap, rest, '', out);
+        _photoDiffInto(_SAVE.photos, photoMap, out);
         wrote = Object.keys(out).length;
         if(wrote > 0 && wrote <= 800) jobs.push(ref.update(out));
-        else if(wrote > 800) jobs.push(ref.update(_cleanVal(rest)));
+        else if(wrote > 800) jobs.push(ref.update(Object.assign(_cleanVal(rest), {photos: Object.keys(photoMap).length ? photoMap : null})));
       } else {
         wrote = 1;
-        jobs.push(ref.update(rest));   // premye sovgad apre yon chajman/enpò : ekri tout (kòm avan)
+        jobs.push(ref.update(Object.assign({}, rest, {photos: Object.keys(photoMap).length ? photoMap : null})));   // premye sovgad apre yon chajman/enpò : ekri tout (kòm avan)
       }
-      const newSnap = _cloneShare(rest);
+      const newSnap = rest;
       if(Array.isArray(DATA.messages)){
         const mj = JSON.stringify(DATA.messages);
         if(_SAVE.msgJson===null) _SAVE.msgJson = mj;
@@ -2882,7 +2987,7 @@ async function _saveDataOnce(){
       }
       _SAVE.pending++; _saveDot();
       const all = Promise.all(jobs).then(()=>{
-        if(mySeq > _SAVE.applied){ _SAVE.applied = mySeq; _SAVE.ref = DATA; _SAVE.path = path; _SAVE.snap = newSnap; }
+        if(mySeq > _SAVE.applied){ _SAVE.applied = mySeq; _SAVE.ref = DATA; _SAVE.path = path; _SAVE.snap = newSnap; _SAVE.photos = photoMap; }
         if(dot){ dot.classList.add('is-online'); dot.classList.remove('is-offline'); dot.title='Anliy — done yo ap anrejistre'; }
         return true;
       }).catch(e=>{
@@ -3611,6 +3716,76 @@ function fixSafeDataIssues(){
   if(DATA.activeYear && DATA.academicYears[DATA.activeYear]) DATA.classes = DATA.academicYears[DATA.activeYear].classes;
   return fixed;
 }
+/* ===================== BACKUP OTOMATIK CHAK JOU =====================
+   Yon kopi pwoteksyon sove nan aparèy la (IndexedDB), yon fwa pa jou, pou 7 dènye jou yo.
+   Se sèlman administratè ki fè l. Pa gen okenn chanjman nan done yo. */
+const AB_KEEP = 7;
+function abDb(){
+  return new Promise((res, rej)=>{
+    try{
+      const rq = indexedDB.open('meda_auto_backups', 1);
+      rq.onupgradeneeded = ()=>{ rq.result.createObjectStore('b', {keyPath:'k'}); };
+      rq.onsuccess = ()=>res(rq.result);
+      rq.onerror = ()=>rej(rq.error);
+    }catch(e){ rej(e); }
+  });
+}
+function abReq(db, mode, fn){
+  return new Promise((res, rej)=>{
+    const tx = db.transaction('b', mode), st = tx.objectStore('b');
+    const out = fn(st);
+    tx.oncomplete = ()=>res(out && out.result!==undefined ? out.result : undefined);
+    tx.onerror = ()=>rej(tx.error); tx.onabort = ()=>rej(tx.error);
+  });
+}
+async function abList(){
+  const db = await abDb();
+  const all = await abReq(db, 'readonly', st=>st.getAll());
+  const sid = String(getSchoolId()||'');
+  return (all||[]).filter(x=>x.sid===sid).sort((a,b)=>a.day<b.day?1:-1);
+}
+async function autoBackupRun(){
+  try{
+    if(!DATA || !window.indexedDB || session.role!=='admin') return;
+    const sid = String(getSchoolId()||'');
+    const day = new Date().toISOString().slice(0,10);
+    const list = await abList();
+    if(list.some(x=>x.day===day)) return;
+    syncActiveYearStore();
+    const snap = Object.assign({}, DATA); delete snap.messages; delete snap.typing; delete snap.pushQueue; delete snap.pushTokens;
+    const json = JSON.stringify(snap);
+    const db = await abDb();
+    await abReq(db, 'readwrite', st=>st.put({k:sid+'|'+day, sid, day, ts:Date.now(), json}));
+    const old = list.slice(AB_KEEP-1);
+    if(old.length) await abReq(db, 'readwrite', st=>{ old.forEach(o=>st.delete(o.k)); });
+  }catch(e){ console.warn('Backup otomatik', e); }
+}
+let _abTimer = null;
+function scheduleAutoBackup(){
+  if(_abTimer) return;
+  _abTimer = setTimeout(()=>{ _abTimer = null; autoBackupRun(); }, 6000);
+}
+async function autoBackupInfoFill(){
+  const info = document.getElementById('auto-backup-info');
+  const btn = document.getElementById('auto-backup-dl');
+  if(!info || !btn) return;
+  try{
+    const list = await abList();
+    if(!list.length){ info.textContent = 'Poko gen backup otomatik. Premye a ap fèt otomatikman.'; btn.disabled = true; return; }
+    info.textContent = 'Kopi disponib : '+list.map(x=>x.day).join(', ')+'.';
+    btn.disabled = false;
+    btn.onclick = ()=>{
+      const r = list[0];
+      const blob = new Blob([r.json], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'backup-otomatik-jesyon-lekol-'+r.day+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    };
+  }catch(e){ info.textContent = 'Backup otomatik pa disponib sou aparèy sa a.'; btn.disabled = true; }
+}
+
 function downloadBackupNow(){
   syncActiveYearStore();
   const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
@@ -4114,6 +4289,7 @@ function render(view){
   else if(view==='teacher') app.innerHTML = viewTeacher();
   wireEvents(view);
   if(view==='admin' || view==='teacher'){ startMessageNotifications(view); initPush(); }
+  if(view==='admin'){ scheduleAutoBackup(); }
   else stopMessageNotifications();
   /* Balans & Peman — chak fonksyon la pwoteje pa try/catch: yon erè isit la pa dwe kraze afichaj app la */
   try{
@@ -4931,6 +5107,10 @@ function academicYearManagerHtml(){
     <div class="theme-toggle-row">
       <div><div class="ttxt">Telechaje yon backup konplè</div><div class="tsub">Konsève tout ane akademik yo, ane aktif la, tout done chak ane, ak paramèt ki nesesè yo nan yon fichye .json.</div></div>
       <button class="btn btn-primary btn-pill" id="download-backup" type="button">Telechaje backup</button>
+    </div>
+    <div class="theme-toggle-row">
+      <div><div class="ttxt">Backup otomatik chak jou</div><div class="tsub" id="auto-backup-info">Ap chèche...</div></div>
+      <button class="btn btn-ghost btn-pill" id="auto-backup-dl" type="button" disabled>Telechaje dènye a</button>
     </div>
     <div class="theme-toggle-row">
       <div><div class="ttxt">Retabli yon backup</div><div class="tsub">⚠️ Sa ap ranplase TOUT done ki nan aplikasyon an kounye a ak sa ki nan fichye backup la.</div></div>
@@ -9089,6 +9269,7 @@ function wireEvents(view){
       });
       const dlBackup = document.getElementById('download-backup');
       if(dlBackup) dlBackup.addEventListener('click', downloadBackupNow);
+      autoBackupInfoFill();
       const restoreInput = document.getElementById('restore-backup-input');
       if(restoreInput) restoreInput.addEventListener('change', async e=>{
         const file = e.target.files && e.target.files[0];
