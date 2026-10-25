@@ -1377,6 +1377,9 @@
   .wsec-btn-no{background:var(--bg);color:var(--text-soft);}
   .wsec-btn-ok{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 52%,var(--g3) 100%);color:#fff;box-shadow:0 6px 16px rgba(var(--blue-rgb),.28);}
   .wsec-forgot{display:block;width:100%;margin-top:14px;padding:8px 4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--blue);font-family:inherit;text-decoration:underline;text-underline-offset:3px;}
+  .wsec-rec-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+  .wsec-rec-card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 44px rgba(var(--blue-rgb),.14);padding:26px 22px 20px;text-align:center;}
+  .wsec-rec-form{text-align:left;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -1415,7 +1418,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.58';
+const APP_VERSION = '2.26.10.59';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -4424,6 +4427,15 @@ function render(view){
     wsecEntryFlow();
     return;
   }
+  if(view==='admin' && ui.wsecMode==='recover' && wsecRecoverStandalone()){
+    /* Retabli kòd : ekran apa, SAN okenn enfòmasyon lajan (balans, depo, peman) */
+    app.innerHTML = wsecRecoverScreenHtml();
+    try{ bindPassToggles(); }catch(e){}
+    wireWalletSecurity();
+    const bk = document.getElementById('wsec-rec-back');
+    if(bk) bk.addEventListener('click', ()=>{ ui.wsecMode=''; ui.adminView='akey'; ui.walOwner=false; render('admin'); });
+    return;
+  }
   const _keep = (view==='admin' || view==='teacher') ? uiCaptureState() : null;
   if(view==='login') app.innerHTML = viewLogin();
   else if(view==='schoolgate') app.innerHTML = viewSchoolGate();
@@ -5727,6 +5739,26 @@ async function wsecEntryFlow(){
     render('admin');
   }
 }
+function wsecRecoverStandalone(){
+  try{ const rec = wsecRec(); return !!(rec && rec.walletSec && wsecSpace()==='money' && !wsecValid()); }catch(e){ return false; }
+}
+function wsecRecoverScreenHtml(){
+  const rec = wsecRec();
+  const qs = (rec && rec.walletSec && rec.walletSec.qs) || [];
+  return `<div class="wsec-rec-page"><div class="wsec-rec-card">
+    <div class="wsec-lock"><span>${ICONS.key}</span></div>
+    <div class="wsec-ttl">Retabli kòd sekrè a</div>
+    <div class="wsec-sub">Reponn kesyon sekou ou te chwazi yo. Si tout repons yo kòrèk, ou pral mete yon nouvo kòd.</div>
+    <form id="wsec-recover-form" autocomplete="off" class="wsec-rec-form">
+      ${qs.map((q,i)=>`<div class="field"><label>${escapeHtml(WSEC_QUESTIONS[q.q]||'')}</label>
+        <input id="wsec-ra${i}" type="text" autocomplete="off" placeholder="Repons ou"></div>`).join('')}
+      ${passField('wsec-pin1','Nouvo kòd (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${passField('wsec-pin2','Konfime nouvo kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      <button type="submit" class="btn btn-primary btn-pill btn-block">Mete nouvo kòd la</button>
+      <button type="button" class="btn btn-ghost btn-pill btn-block" id="wsec-rec-back" style="margin-top:10px">Retounen</button>
+    </form>
+  </div></div>`;
+}
 function wsecLockedHtml(){
   return `<div class="boot-loader"><div class="boot-loader-inner" style="gap:14px;text-align:center">
     <div style="width:68px;height:68px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--g1),var(--g3));color:#fff;box-shadow:0 10px 24px rgba(var(--blue-rgb),.35)"><span style="width:32px;height:32px;display:block">${ICONS.key}</span></div>
@@ -5850,8 +5882,8 @@ function walletSecurityCardHtml(){
       ${passField('wsec-pin1','Nouvo kòd (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
       ${passField('wsec-pin2','Konfime nouvo kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
       <button type="submit" class="btn btn-primary btn-pill btn-block">Chanje kòd la</button>
-      <button type="button" class="btn btn-block" data-wsec-mode="" style="margin-top:8px">Anile</button>
-      <button type="button" class="btn btn-block" data-wsec-mode="recover" style="margin-top:8px">Ou bliye ansyen kòd la ?</button>
+      <button type="button" class="btn btn-ghost btn-pill btn-block" data-wsec-mode="" style="margin-top:10px">Anile</button>
+      <button type="button" class="wsec-forgot" data-wsec-mode="recover">Ou bliye ansyen kòd la ?</button>
     </form>`;
   } else if(mode==='recover'){
     const qs = rec.walletSec.qs || [];
@@ -5862,7 +5894,7 @@ function walletSecurityCardHtml(){
       ${passField('wsec-pin1','Nouvo kòd (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
       ${passField('wsec-pin2','Konfime nouvo kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
       <button type="submit" class="btn btn-primary btn-pill btn-block">Mete nouvo kòd la</button>
-      <button type="button" class="btn btn-block" data-wsec-mode="" style="margin-top:8px">Anile</button>
+      <button type="button" class="btn btn-ghost btn-pill btn-block" data-wsec-mode="" style="margin-top:10px">Anile</button>
     </form>`;
   } else {
     body = `<div class="wal-sub">✅ Kòd sekrè aktif. Li pwoteje demann rechaj ak depans.</div>
