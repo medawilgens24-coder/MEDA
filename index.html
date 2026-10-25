@@ -1275,7 +1275,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.44';
+const APP_VERSION = '2.26.10.48';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -1429,6 +1429,35 @@ function _dlgOpen(kind, title, message, opts){
 function showAlert(message, opts){ return _dlgOpen('alert', (opts&&opts.title)||'Enfòmasyon', message, opts); }
 function showConfirm(message, opts){ return _dlgOpen('confirm', (opts&&opts.title)||'Konfimasyon', message, opts); }
 function showPrompt(message, defaultValue){ return _dlgOpen('prompt', 'Konfimasyon', message, {defaultValue}); }
+
+/* ===================== NOTIFIKASYON NOUVO VÈSYON =====================
+   Pwopriyetè a (apre li louvri nouvo fichye a yon fwa) ekri vèsyon ki pi resan an nan
+   Firebase : appConfig/latestVersion. Tout lòt aparèy konpare l ak APP_VERSION yo,
+   epi montre yon ti mesaj si yo sou yon ansyen fichye. Tout erè yo rete silansye. */
+function verCmp(a, b){
+  const x = String(a||'').split('.').map(n=>parseInt(n,10)||0), y = String(b||'').split('.').map(n=>parseInt(n,10)||0);
+  for(let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if(d) return d>0?1:-1; }
+  return 0;
+}
+let _updChecked = 0, _updShown = false;
+async function checkAppUpdate(){
+  try{
+    if(!(FIREBASE_ENABLED && fbDb && fbAuth && fbAuth.currentUser)) return;
+    if(Date.now()-_updChecked < 60000) return;
+    _updChecked = Date.now();
+    const ref = fbDb.ref('appConfig/latestVersion');
+    const snap = await withTimeout(ref.get(), 8000);
+    const latest = snap && snap.exists() ? snap.val() : null;
+    if(isOwner() && verCmp(APP_VERSION, latest) > 0){ try{ await ref.set(APP_VERSION); }catch(e){} return; }
+    if(latest && verCmp(latest, APP_VERSION) > 0 && !_updShown){
+      _updShown = true;
+      showToast({ title:'Gen yon nouvo vèsyon', message:'Vèsyon v'+latest+' disponib (ou gen v'+APP_VERSION+'). Mete fichye/APK a ajou. Tape la a pou rechaje paj la.', duration:12000, onClick:()=>{ try{ location.reload(); }catch(e){} } });
+    }
+  }catch(e){}
+}
+setTimeout(checkAppUpdate, 4000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkAppUpdate(); });
+setInterval(checkAppUpdate, 10*60000);
 
 /* ===================== DATA LAYER ===================== */
 const DEFAULT_TERMS = ["Premye Trimès","Dezyèm Trimès","Twazyèm Trimès"];
@@ -2778,6 +2807,7 @@ window.addEventListener('pagehide', gradeFlushDirty);
    • Pou nenpòt nouvo chan/fòm : modifye DATA dirèkteman (sa afiche touswit),
      epi rele debounceSave(el, ()=>saveData(), 10)  — pa janm tann plis pase 10 ms.
    ===================================================================== */
+const SAVE_WAIT_MS = 10;   /* regl 10 ms: app la pa tann sèvè a — paj la rann touswit, sovgad la fini dèyè */
 const _SAVE = { ref:null, path:null, snap:null, msgJson:null, pending:0, seq:0, applied:0 };
 function _cloneShare(v){
   if(v===null || typeof v!=='object') return v;
@@ -2861,7 +2891,7 @@ async function _saveDataOnce(){
         if(dot){ dot.classList.remove('is-online'); dot.classList.add('is-offline'); dot.title='Òfliy — done yo PAP anrejistre kounye a'; }
         return false;
       }).finally(()=>{ _SAVE.pending--; _saveDot(); });
-      const early = await Promise.race([ all, new Promise(r=>setTimeout(()=>r('slow'), 1200)) ]);
+      const early = await Promise.race([ all, new Promise(r=>setTimeout(()=>r('slow'), SAVE_WAIT_MS)) ]);
       if(early === 'slow'){
         all.then(ok=>{ if(ok===false) showToast({ title:'Sovgad la pa pase', message:'Verifye entènèt ou — chanjman an ap eseye ankò.', duration:5000 }); });
         return true;
@@ -5280,7 +5310,209 @@ function stopOwnerWatch(){
 async function walletEnsureLoaded(){
   for(let i=0; i<40 && !WALLET.loaded; i++){ await new Promise(r=>setTimeout(r,100)); }
 }
+/* ===================== KÒD SEKRÈ BALANS & PEMAN =====================
+   Pwoteje demann rechaj + depans ak yon PIN. Done yo rete nan DATA.admins[..].walletSec
+   (hash PBKDF2 — jamè PIN an klè). Kesyon sekou pou si ou bliye kòd la. */
+const WSEC_QUESTIONS = [
+  'Ki non premye lekòl ou te ale?',
+  'Ki non pi bon zanmi anfans ou?',
+  'Nan ki vil oswa vilaj manman w fèt?',
+  'Ki non premye bèt kay ou te genyen?',
+  'Ki non pwofesè ou te pi renmen?',
+  'Ki manje ou pi renmen?',
+  'Ki non pitit gason oswa pitit fi pi gran nan fanmi w la?',
+  'Ki dènye 4 chif nimewo telefòn ki pi enpòtan pou ou a?'
+];
+let _wsecOk = 0;
+function wsecRec(){
+  const me = currentAdmin();
+  return (DATA.admins||[]).find(a=>a.username===me.username) || null;
+}
+function wsecHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function wsecNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }
+async function wsecHash(text, salt){
+  const data = new TextEncoder().encode(String(text));
+  try{
+    if(window.crypto && crypto.subtle){
+      const key = await crypto.subtle.importKey('raw', data, 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:'SHA-256', salt:new TextEncoder().encode(salt), iterations:100000}, key, 256);
+      return wsecHex(bits);
+    }
+  }catch(e){}
+  let h1=0x811c9dc5, h2=0x1b873593; const s=salt+'|'+text;
+  for(let r=0;r<2000;r++){ for(let i=0;i<s.length;i++){ h1=Math.imul(h1^s.charCodeAt(i),16777619)>>>0; h2=Math.imul(h2+s.charCodeAt(i)+r,2246822519)>>>0; } }
+  return 'f'+h1.toString(16)+h2.toString(16);
+}
+function wsecNewSalt(){
+  const a = new Uint8Array(16);
+  try{ crypto.getRandomValues(a); }catch(e){ for(let i=0;i<16;i++) a[i]=Math.floor(Math.random()*256); }
+  return wsecHex(a);
+}
+function wsecLockKey(){ return 'wsec_lock_'+(currentAdmin().username||''); }
+function wsecLockGet(){ try{ return JSON.parse(localStorage.getItem(wsecLockKey())||'{}')||{}; }catch(e){ return {}; } }
+function wsecLockSet(o){ try{ localStorage.setItem(wsecLockKey(), JSON.stringify(o)); }catch(e){} }
+function wsecLockedSec(){ const l=wsecLockGet(); return (l.until && Date.now()<l.until) ? Math.ceil((l.until-Date.now())/1000) : 0; }
+function wsecLockMsg(sec){ return 'Twòp tantativ. Eseye ankò nan '+sec+' segonn.'; }
+function wsecFail(){
+  const l = wsecLockGet(); l.n=(l.n||0)+1;
+  if(l.n>=5){ l.until=Date.now()+45000; l.n=0; }
+  wsecLockSet(l);
+}
+function wsecReset(){ wsecLockSet({}); }
+async function wsecCheckPin(rec, pin){
+  return (await wsecHash(String(pin), rec.walletSec.salt)) === rec.walletSec.pin;
+}
+function wsecAskPin(title){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.className = 'dlg-overlay';
+    ov.innerHTML = `<div class="dlg-box" role="dialog" aria-modal="true">
+      <div class="dlg-icon dlg-warn">${DLG_ICONS.ask}</div>
+      <div class="dlg-title"></div>
+      <div class="dlg-msg">Antre kòd sekrè balans ou an pou kontinye.</div>
+      <input type="password" inputmode="numeric" autocomplete="off" maxlength="6" class="dlg-input" placeholder="••••" />
+      <div class="dlg-actions">
+        <button type="button" class="dlg-btn dlg-btn-cancel" data-w="no">Anile</button>
+        <button type="button" class="dlg-btn dlg-btn-ok" data-w="ok">Konfime</button>
+      </div>
+      <button type="button" class="btn btn-block" data-w="forgot" style="margin-top:10px">Mwen bliye kòd la</button>
+    </div>`;
+    ov.querySelector('.dlg-title').textContent = title || 'Kòd sekrè';
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>ov.classList.add('dlg-show'));
+    const inp = ov.querySelector('input');
+    const done = v=>{ ov.classList.remove('dlg-show'); setTimeout(()=>ov.remove(),140); resolve(v); };
+    ov.querySelector('[data-w="ok"]').addEventListener('click', ()=>done(inp.value));
+    ov.querySelector('[data-w="no"]').addEventListener('click', ()=>done(null));
+    ov.querySelector('[data-w="forgot"]').addEventListener('click', ()=>done('\u0000forgot'));
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); done(inp.value); } });
+    setTimeout(()=>inp.focus(), 60);
+  });
+}
+async function walletPinGate(){
+  const rec = wsecRec();
+  if(!rec || !rec.walletSec) return true;
+  if(Date.now() < _wsecOk) return true;
+  for(;;){
+    const lm = wsecLockedSec();
+    if(lm){ await showAlert(wsecLockMsg(lm)); return false; }
+    const v = await wsecAskPin('Kòd sekrè');
+    if(v===null) return false;
+    if(v==='\u0000forgot'){ ui.adminView='wal'; ui.wsecMode='recover'; render('admin'); return false; }
+    if(await wsecCheckPin(rec, v.trim())){ wsecReset(); _wsecOk = Date.now()+5*60000; return true; }
+    wsecFail();
+    await showAlert('Kòd la pa bon.', {icon:'warn'});
+  }
+}
+function wsecQSelect(id, selected){
+  return `<select id="${id}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border,#ccc);background:inherit;color:inherit">${WSEC_QUESTIONS.map((q,i)=>`<option value="${i}" ${i===selected?'selected':''}>${escapeHtml(q)}</option>`).join('')}</select>`;
+}
+function wsecQBlocks(){
+  return [0,1,2].map(i=>`<div class="field"><label>Kesyon ${i+1}</label>${wsecQSelect('wsec-q'+i, i)}
+    <input id="wsec-a${i}" type="text" autocomplete="off" placeholder="Repons ou" style="margin-top:6px"></div>`).join('');
+}
+function walletSecurityCardHtml(){
+  const rec = wsecRec();
+  const has = !!(rec && rec.walletSec);
+  const mode = ui.wsecMode || '';
+  let body = '';
+  if(!has){
+    body = `<p class="hint" style="text-align:left;margin:0 0 12px">Mete yon kòd sekrè (4 a 6 chif). Si yon moun pran telefòn ou, li p ap ka mande rechaj ni depanse lajan san kòd la. Chwazi 3 kesyon sekou pou si ou bliye kòd la.</p>
+    <form id="wsec-create-form" autocomplete="off">
+      ${passField('wsec-pin1','Kòd sekrè (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${passField('wsec-pin2','Konfime kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${wsecQBlocks()}
+      <button type="submit" class="btn btn-primary btn-pill btn-block">Aktive kòd sekrè a</button>
+    </form>`;
+  } else if(mode==='change'){
+    body = `<form id="wsec-change-form" autocomplete="off">
+      ${passField('wsec-old','Ansyen kòd','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${passField('wsec-pin1','Nouvo kòd (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${passField('wsec-pin2','Konfime nouvo kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      <button type="submit" class="btn btn-primary btn-pill btn-block">Chanje kòd la</button>
+      <button type="button" class="btn btn-block" data-wsec-mode="" style="margin-top:8px">Anile</button>
+      <button type="button" class="btn btn-block" data-wsec-mode="recover" style="margin-top:8px">Mwen bliye ansyen kòd la</button>
+    </form>`;
+  } else if(mode==='recover'){
+    const qs = rec.walletSec.qs || [];
+    body = `<p class="hint" style="text-align:left;margin:0 0 12px">Reponn kesyon sekou yo pou mete yon nouvo kòd.</p>
+    <form id="wsec-recover-form" autocomplete="off">
+      ${qs.map((q,i)=>`<div class="field"><label>${escapeHtml(WSEC_QUESTIONS[q.q]||'')}</label>
+        <input id="wsec-ra${i}" type="text" autocomplete="off" placeholder="Repons ou"></div>`).join('')}
+      ${passField('wsec-pin1','Nouvo kòd (4 a 6 chif)','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      ${passField('wsec-pin2','Konfime nouvo kòd la','inputmode="numeric" maxlength="6" autocomplete="off"')}
+      <button type="submit" class="btn btn-primary btn-pill btn-block">Retabli kòd la</button>
+      <button type="button" class="btn btn-block" data-wsec-mode="" style="margin-top:8px">Anile</button>
+    </form>`;
+  } else {
+    body = `<div class="wal-sub">✅ Kòd sekrè aktif. Li pwoteje demann rechaj ak depans.</div>
+    <button type="button" class="btn btn-primary btn-pill btn-block" data-wsec-mode="change" style="margin-top:10px">Chanje kòd la</button>`;
+  }
+  return `<div class="card" id="wsec-card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.idcard}</span><h3>Kòd sekrè balans</h3></div>
+    ${body}
+  </div>`;
+}
+function wireWalletSecurity(){
+  document.querySelectorAll('[data-wsec-mode]').forEach(b=>b.addEventListener('click', ()=>{ ui.wsecMode = b.dataset.wsecMode; render('admin'); }));
+  const val = id=>{ const el=document.getElementById(id); return el ? el.value : ''; };
+  const checkNew = async ()=>{
+    const p1=val('wsec-pin1').trim(), p2=val('wsec-pin2').trim();
+    if(!/^\d{4,6}$/.test(p1)){ await showAlert('Kòd la dwe gen 4 a 6 chif.'); return null; }
+    if(p1!==p2){ await showAlert('De kòd yo pa menm.'); return null; }
+    return p1;
+  };
+  const cf = document.getElementById('wsec-create-form');
+  if(cf) cf.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const p = await checkNew(); if(!p) return;
+    const qi = [0,1,2].map(i=>Number(val('wsec-q'+i)));
+    if(new Set(qi).size<3){ await showAlert('Chwazi 3 kesyon diferan.'); return; }
+    const ans = [0,1,2].map(i=>wsecNorm(val('wsec-a'+i)));
+    if(ans.some(a=>a.length<2)){ await showAlert('Reponn tout 3 kesyon yo.'); return; }
+    const rec = wsecRec(); if(!rec){ await showAlert('Kont lan pa jwenn.'); return; }
+    const salt = wsecNewSalt();
+    const qs = [];
+    for(let i=0;i<3;i++) qs.push({q:qi[i], a: await wsecHash(ans[i], salt+':'+i)});
+    rec.walletSec = { salt, pin: await wsecHash(p, salt), qs, at: Date.now() };
+    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await showAlert('Kòd sekrè a aktive.'); render('admin');
+  });
+  const ch = document.getElementById('wsec-change-form');
+  if(ch) ch.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const rec = wsecRec(); if(!rec || !rec.walletSec) return;
+    const lm = wsecLockedSec(); if(lm){ await showAlert(wsecLockMsg(lm)); return; }
+    if(!(await wsecCheckPin(rec, val('wsec-old').trim()))){ wsecFail(); await showAlert('Ansyen kòd la pa bon.'); return; }
+    wsecReset();
+    const p = await checkNew(); if(!p) return;
+    rec.walletSec.pin = await wsecHash(p, rec.walletSec.salt);
+    rec.walletSec.at = Date.now();
+    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await showAlert('Kòd la chanje.'); render('admin');
+  });
+  const rc = document.getElementById('wsec-recover-form');
+  if(rc) rc.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const rec = wsecRec(); if(!rec || !rec.walletSec) return;
+    const lm = wsecLockedSec(); if(lm){ await showAlert(wsecLockMsg(lm)); return; }
+    const qs = rec.walletSec.qs||[];
+    let good = 0;
+    for(let i=0;i<qs.length;i++){
+      if((await wsecHash(wsecNorm(val('wsec-ra'+i)), rec.walletSec.salt+':'+i)) === qs[i].a) good++;
+    }
+    if(good < qs.length){ wsecFail(); await showAlert('Repons yo pa kòrèk.'); return; }
+    wsecReset();
+    const p = await checkNew(); if(!p) return;
+    rec.walletSec.pin = await wsecHash(p, rec.walletSec.salt);
+    rec.walletSec.at = Date.now();
+    await saveData(); _wsecOk = Date.now()+5*60000; ui.wsecMode='';
+    await showAlert('Nouvo kòd la anrejistre.'); render('admin');
+  });
+}
+
 async function walletSpend(kind, amount){
+  if(!isOwner() && !await walletPinGate()) throw new Error('Kòd sekrè a pa konfime');
   const ref = fbDb.ref('wallets/'+WALLET.uid+'/spends').push();
   await withTimeout(ref.set({ kind, amount, ts: serverTs() }), 9000);
 }
@@ -5432,6 +5664,7 @@ function adminWallet(me){
     ${errLine}
   </div>
   ${owner ? ownerDepositStatsHtml() : ''}
+  ${walletSecurityCardHtml()}
   ${owner ? `<div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.idcard}</span><h3>Panèl pwopriyetè</h3></div>
     <button type="button" class="btn btn-primary btn-pill btn-block" id="wal-open-owner">Verifye peman yo (${pending} an atant)</button>
@@ -5574,6 +5807,7 @@ function ownerSearchMatchHtml(code){
   `;
 }
 async function ownerVerify(uid, id){
+  if(!await walletPinGate()) return;
   const r = OWNER.list.find(x=>x.uid===uid && x.id===id);
   if(!r || r.status!=='pending') return;
   const dup = OWNER.list.find(x=>x.id!==id && x.status==='verified' && String(x.txid||'').toUpperCase()===String(r.txid||'').toUpperCase());
@@ -5588,6 +5822,7 @@ async function ownerVerify(uid, id){
   catch(e){ await showAlert('Pa t kapab verifye ('+((e&&e.message)||'erè')+'). Eseye ankò.'); }
 }
 async function ownerReject(uid, id){
+  if(!await walletPinGate()) return;
   const r = OWNER.list.find(x=>x.uid===uid && x.id===id);
   if(!r || r.status!=='pending') return;
   const reason = await showPrompt('Rejte peman '+fmtG(r.amount)+' G sa a ? Ekri yon rezon (opsyonèl) epi konfime:', '');
@@ -5600,6 +5835,7 @@ async function ownerReject(uid, id){
    itilizatè a (wallets/{uid}/credits) rete entak, se jis antre istorik
    la k ap disparèt. */
 async function ownerDeleteOne(uid, id){
+  if(!await walletPinGate()) return;
   const r = OWNER.list.find(x=>x.uid===uid && x.id===id);
   if(!r) return;
   if(!await showConfirm('Efase demann '+fmtG(r.amount)+' G sa a nan istorik la? Sa PAP retire okenn lajan sou balans itilizatè a si peman an te deja verifye — se jis lis istorik la (men total depo a ap bese).', {danger:true, okLabel:'Wi, efase l'})) return;
@@ -5610,6 +5846,7 @@ async function ownerDeleteOne(uid, id){
    sèlman 20 ki afiche yo) — pa touche demann ki an atant, ni balans
    itilizatè yo. Aksyon sa a pa ka anile. */
 async function ownerClearHistory(){
+  if(!await walletPinGate()) return;
   const items = OWNER.list.filter(r=>r.status!=='pending');
   if(!items.length){ await showAlert('Pa gen okenn istorik pou efase.'); return; }
   if(!await showConfirm('Efase TOUT '+items.length+' demann ki nan istorik la (verifye + rejte)? Sa PAP touche balans itilizatè yo ni demann ki an atant — se jis lis istorik la k ap disparèt nèt (total depo a ap tounen sou zewo pou sa yo). Aksyon sa a pa ka anile.', {danger:true, okLabel:'Wi, efase tout istorik la'})) return;
@@ -8537,8 +8774,9 @@ function wireEvents(view){
       });
     }
     if(ui.adminView==='wal'){
+      wireWalletSecurity();
       const openOwner = document.getElementById('wal-open-owner');
-      if(openOwner) openOwner.addEventListener('click', ()=>{ ui.walOwner=true; render('admin'); });
+      if(openOwner) openOwner.addEventListener('click', async ()=>{ if(!await walletPinGate()) return; ui.walOwner=true; render('admin'); });
       const buyVip = document.getElementById('wal-buy-vip');
       if(buyVip) buyVip.addEventListener('click', ()=>{ buyVipPass(currentAdmin()); });
       const ownBack = document.getElementById('own-back');
@@ -8585,6 +8823,7 @@ function wireEvents(view){
           if(phone.replace(/\D/g,'').length<8){ await showAlert('Antre nimewo NatCash ou te itilize a.'); return; }
           if(WALLET.reqs.some(r=>String(r.txid||'').toUpperCase()===txid && r.status!=='rejected')){ await showAlert('Ou deja soumèt kòd sa a.'); return; }
           if(WALLET.reqs.filter(r=>r.status==='pending').length>=5){ await showAlert('Ou gen deja 5 demann an atant. Tann yo verifye anvan.'); return; }
+          if(!await walletPinGate()) return;
           const me = currentAdmin();
           const btn = wf.querySelector('button[type="submit"]'); if(btn) btn.disabled = true;
           try{
