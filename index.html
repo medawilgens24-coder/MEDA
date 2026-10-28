@@ -1501,7 +1501,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.71';
+const APP_VERSION = '2.26.10.72';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -4008,7 +4008,7 @@ async function autoBackupInfoFill(){
       const blob = new Blob([r.json], {type:'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'backup-otomatik-jesyon-lekol-'+r.day+'.json';
+      a.href = url; a.download = 'backup-otomatik-meda-'+r.day+'.json';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>URL.revokeObjectURL(url), 2000);
     };
@@ -4021,7 +4021,7 @@ function downloadBackupNow(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const stamp = new Date().toISOString().slice(0,10);
-  a.href = url; a.download = `backup-jesyon-lekol-${stamp}.json`;
+  a.href = url; a.download = `backup-meda-${stamp}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
 }
@@ -6545,7 +6545,7 @@ function adminHelp(me){
   </div>
   <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.help}</span><h3>Sa aplikasyon an pèmèt ou fè</h3></div>
-    <p class="help-note">Jesyon Lekòl se yon zouti konplè pou dirije yon lekòl: depi enskripsyon elèv yo jiskaske w remèt bilten ak dokiman ofisyèl yo. Men tout sa li pèmèt ou fè, an detay:</p>
+    <p class="help-note">MEDA se yon zouti konplè pou dirije yon lekòl: depi enskripsyon elèv yo jiskaske w remèt bilten ak dokiman ofisyèl yo. Men tout sa li pèmèt ou fè, an detay:</p>
     <p class="help-note" style="margin-top:14px"><strong>1. Klas ak matyè</strong></p>
     <ul class="help-note" style="margin:4px 0 0;padding-left:20px;line-height:1.7"><li>Kreye kantite klas ou vle; chak klas gen pwòp kòd li, pwòp matyè, pwòp elèv ak pwòp nòt.</li><li>Ajoute matyè yo ak barèm pwen pou chak matyè, epi chwazi ki pwofesè ki anseye yo (yon sèl pwofesè oswa plizyè pwofesè nan menm klas).</li><li>Jere lis elèv yo: ajoute, modifye, chèche epi swiv kantite elèv nan chak klas.</li><li>Kreye ak konsilte orè chak klas.</li></ul>
     <p class="help-note" style="margin-top:14px"><strong>2. Nòt, palmarès ak bilten</strong></p>
