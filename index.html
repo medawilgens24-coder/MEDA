@@ -1389,6 +1389,28 @@
   .msg-action-btn.danger{color:var(--red);}
   .msg-action-btn.cancel{margin-top:10px;background:var(--card);border-radius:20px;border:none;text-align:center;font-weight:700;color:var(--blue);padding:16px;box-shadow:0 10px 26px rgba(16,21,46,.24);}
   .msg-action-group .msg-action-btn:last-child{border-bottom:none;}
+
+  /* ===== Animasyon touche (retou vizyèl lè w peze yon bagay) ===== */
+  button,.btn,[role="button"],.sb-link,.tab-btn,.role-tab,.msg-convo-item,.theme-toggle-row,.wal-chip,.uc-chip,.code-chip,.uc-pick-row,.hist-row,.profile-info-item,label.btn,select,summary{
+    -webkit-tap-highlight-color:rgba(var(--blue-rgb),.12);
+    transition:transform .14s cubic-bezier(.2,.8,.3,1),filter .14s ease,background-color .18s ease,box-shadow .18s ease,opacity .18s ease;
+  }
+  button:not(:disabled):active,.btn:not(:disabled):active,[role="button"]:active,.tab-btn:active,.role-tab:active,.wal-chip:active,.uc-chip:active,.code-chip:active,label.btn:active{
+    transform:scale(.95);filter:brightness(.95);
+  }
+  .sb-link:active,.msg-convo-item:active,.theme-toggle-row:active,.uc-pick-row:active,.hist-row:active{
+    transform:scale(.98);filter:brightness(.96);
+  }
+  @media (hover:hover){
+    .btn:not(:disabled):hover,button.btn-pill:not(:disabled):hover{transform:translateY(-1px);}
+    .sb-link:hover,.msg-convo-item:hover{filter:brightness(.98);}
+  }
+  @keyframes medaPop{0%{transform:scale(.97);opacity:.6;}60%{transform:scale(1.015);opacity:1;}100%{transform:scale(1);opacity:1;}}
+  input:focus,select:focus,textarea:focus{transition:box-shadow .2s ease,border-color .2s ease;}
+  @media (prefers-reduced-motion:reduce){
+    button,.btn,[role="button"],.sb-link,.tab-btn,.role-tab{transition:none !important;}
+    button:active,.btn:active,.sb-link:active{transform:none !important;}
+  }
 </style>
 </head>
 <body>
@@ -1427,7 +1449,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.60';
+const APP_VERSION = '2.26.10.64';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -6468,6 +6490,21 @@ function adminHelp(me){
         <button type="button" id="hp-copy" class="btn btn-ghost btn-pill">Kopye mesaj la</button>
       </div>
     </form>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.help}</span><h3>Remèsiman & moun k ap ede m</h3></div>
+    <p class="help-note"><strong>Zamoradinia GLOZY</strong> se yon gran fanm ki toujou kanpe bò kote m, ki ede m, ki ankouraje m epi ki sipòte m nan travay mwen ak aplikasyon sa a. Mèsi anpil pou èd li, pasyans li ak bon kè li.</p>
+    <p class="hint">Aplikasyon Jesyon Lekòl la fèt ak anpil devouman. Gras ak moun tankou Zamoradinia GLOZY, li ka kontinye grandi pou sèvi lekòl yo.</p>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.help}</span><h3>Remèsiman pou fanmi m</h3></div>
+    <p class="help-note">Mwen di tout fanmi m mèsi anpil pou lanmou, sipò ak priyè yo. Yo chak gen yon plas espesyal nan kè m:</p>
+    <p class="help-note"><strong>Léonel MEDA</strong>, papa m, ki se kolòn fanmi an. Mèsi pou tout sakrifis ou ak konsèy ou.</p>
+    <p class="help-note"><strong>Ernanthe MEDA</strong>, <strong>Ruth MEDA</strong>, <strong>Louisemene MEDA</strong> ak <strong>Isemaelle MEDA</strong>, sè m yo. Mèsi paske nou toujou la pou mwen, nan bon jan tan kou nan move tan.</p>
+    <p class="help-note"><strong>Ernst MEDA</strong>, frè m. Mèsi pou sipò ou ak ankourajman ou.</p>
+    <p class="help-note"><strong>Sophony LORISSAINT</strong> ak <strong>Ovince LOUIS</strong>, bòfrè m yo. Mèsi pou kè nou ak sipò nou bay fanmi an.</p>
+    <p class="help-note"><strong>Marie France</strong>, bèlsè m. Mèsi pou bon kè ou ak sipò ou.</p>
+    <p class="hint">Ak tout lòt moun ki te la pou mwen… Bondye beni nou tout.</p>
   </div>`;
 }
 
