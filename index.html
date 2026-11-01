@@ -1501,7 +1501,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.72';
+const APP_VERSION = '2.26.10.73';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2758,17 +2758,25 @@ document.addEventListener('click', async e=>{
       for(const uid of uids){
         const snap = await withTimeout(fbDb.ref('wallets/'+uid+'/spends').once('value'), 9000);
         const v = snap.val() || {};
-        Object.keys(v).forEach(id=>{ const x=v[id]; if(x && String(x.kind||'').indexOf('color:')===0) rows.push({uid, id, kind:x.kind.slice(6), amount:x.amount, ts:x.ts, revoked:!!x.revoked}); });
+        Object.keys(v).forEach(id=>{ const x=v[id]; if(x && x.kind) rows.push({uid, id, kind:String(x.kind), amount:x.amount, ts:x.ts, revoked:!!x.revoked}); });
       }
       rows.sort((a,b)=>(b.ts||0)-(a.ts||0));
       const who = uid => { const r = OWNER.list.find(z=>z.uid===uid); return r ? (r.name||r.email||uid) : uid; };
-      const nm = k => k==='custom' ? 'Koulè pèsonèl' : ((COLOR_PRESETS.find(z=>z.id===k)||{}).label || k);
-      box.innerHTML = rows.length ? rows.map(r=>`<div class="wal-req">
-        <div class="wal-req-top"><b>${escapeHtml(nm(r.kind))} · ${fmtG(r.amount)} G</b><span class="wal-st wal-st-${r.revoked?'rejected':'verified'}">${r.revoked?'Retire':'Aktif'}</span></div>
+      const OWN_KIND = { vippass:'Pas VIP (1 mwa)', fontpass:'Estil ekriti premium (24è)', doc:'Modèl dokiman premium', doctype:'Dokiman ofisyèl', bulletin:'Estil bilten premium', palmares:'Estil palmarès premium' };
+      const nm = k => k.indexOf('color:')===0 ? (k==='color:custom' ? 'Koulè pèsonèl' : 'Koulè ' + ((COLOR_PRESETS.find(z=>z.id===k.slice(6))||{}).label || k.slice(6))) : (OWN_KIND[k] || k);
+      /* Aksè ki dire (ka retire/remèt) : koulè, pas VIP, estil ekriti. Rès la se peman pou chak itilizasyon. */
+      const lasting = k => k.indexOf('color:')===0 || k==='vippass' || k==='fontpass';
+      box.innerHTML = rows.length ? rows.map(r=>{
+        const can = lasting(r.kind);
+        const st = can ? (r.revoked?'Retire':'Aktif') : 'Itilize';
+        const cls = can ? (r.revoked?'rejected':'verified') : 'pending';
+        const btn = can ? `<div class="wal-actions"><button type="button" class="btn btn-ghost btn-pill" data-col-toggle="${escapeHtml(r.uid)}|${escapeHtml(r.id)}|${r.revoked?'1':'0'}">${r.revoked?'Remèt aksè':'Retire aksè'}</button></div>` : '';
+        return `<div class="wal-req">
+        <div class="wal-req-top"><b>${escapeHtml(nm(r.kind))} · ${fmtG(r.amount)} G</b><span class="wal-st wal-st-${cls}">${st}</span></div>
         <div>${escapeHtml(who(r.uid))}</div>
         <div class="hint" style="text-align:left;margin:4px 0 0">${escapeHtml(walDate(r.ts))}</div>
-        <div class="wal-actions"><button type="button" class="btn btn-ghost btn-pill" data-col-toggle="${escapeHtml(r.uid)}|${escapeHtml(r.id)}|${r.revoked?'1':'0'}">${r.revoked?'Remèt aksè':'Retire aksè'}</button></div>
-      </div>`).join('') : '<div class="empty-state">Pèsonn poko achte yon koulè.</div>';
+        ${btn}
+      </div>`; }).join('') : '<div class="empty-state">Pèsonn poko achte anyen.</div>';
     }catch(err){
       box.innerHTML = '<p class="error-msg">Pa ka li done yo ('+escapeHtml((err && err.message)||'erè')+').</p>';
     }
@@ -2779,7 +2787,7 @@ document.addEventListener('click', async e=>{
   if(tg && isOwner()){
     const parts = tg.dataset.colToggle.split('|');
     const revoke = parts[2] !== '1';
-    if(!await showConfirm(revoke ? 'Retire aksè ak koulè sa a pou itilizatè a? Pa gen ranbousman — li pa p ka itilize l ankò.' : 'Remèt aksè ak koulè sa a pou itilizatè a?', {danger:revoke})) return;
+    if(!await showConfirm(revoke ? 'Retire aksè sa a pou itilizatè a? Pa gen ranbousman — li pa p ka itilize l ankò.' : 'Remèt aksè sa a pou itilizatè a?', {danger:revoke})) return;
     try{
       await withTimeout(fbDb.ref('wallets/'+parts[0]+'/spends/'+parts[1]).update({revoked: revoke ? true : null}), 9000);
       const lb2 = document.querySelector('[data-own-colors]'); if(lb2) lb2.click();
@@ -5538,8 +5546,8 @@ function walletRecompute(v){
     const x=spends[k]; if(!x) return;
     sp += Number(x.amount)||0;
     if(GIFT_KINDS.indexOf(x.kind)>=0) elig += Number(x.amount)||0;
-    if(x.kind==='fontpass') pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
-    if(x.kind==='vippass') vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
+    if(x.kind==='fontpass' && !x.revoked) pass = Math.max(pass, (Number(x.ts)||0) + 86400000);
+    if(x.kind==='vippass' && !x.revoked) vip = Math.max(vip, (Number(x.ts)||0) + 30*86400000);
     if(typeof x.kind==='string' && x.kind.indexOf('color:')===0 && !x.revoked) cols[x.kind.slice(6)] = true;   /* achte = pou tout tan, sof si pwopriyetè a retire l */
   });
   const wc = credits.welcome;
@@ -5551,6 +5559,16 @@ function walletRecompute(v){
   WALLET.fontPassUntil = pass;
   WALLET.vipUntil = vip;
   WALLET.colors = cols;
+}
+/* Si pwopriyetè a retire/remèt pas VIP la, badj la (vipUntil nan fich admin lan) swiv wallet la. */
+function vipSyncRecord(){
+  if(!WALLET.loaded || WALLET.error || !fbAuth || !fbAuth.currentUser || typeof DATA==='undefined' || !DATA) return;
+  const rec = (DATA.admins||[]).find(a=>a.uid===fbAuth.currentUser.uid);
+  if(!rec || isOwnerEmail(rec.email)) return;
+  const want = WALLET.vipUntil > nowServer() ? WALLET.vipUntil : 0;
+  const have = Number(rec.vipUntil)||0;
+  if(want && have !== want){ rec.vipUntil = want; try{ saveData(); }catch(e){} }
+  else if(!want && have > nowServer()){ rec.vipUntil = 0; try{ saveData(); }catch(e){} }
 }
 function walletFontPassActive(){ return WALLET.fontPassUntil > nowServer(); }
 function walletVipActive(){ return WALLET.vipUntil > nowServer(); }
@@ -5623,7 +5641,7 @@ function startWalletWatch(){
       _offsetRef = fbDb.ref('.info/serverTimeOffset');
       _offsetRef.on('value', sn=>{ SERVER_OFFSET = Number(sn.val())||0; });
       WALLET.ref = fbDb.ref('wallets/'+u.uid);
-      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; try{ ucEnforce(); }catch(e){} walletRefreshUI(); walletMaybeClaimWelcome(); };
+      WALLET.handler = snap=>{ walletRecompute(snap.val()||{}); WALLET.loaded=true; WALLET.error=null; try{ ucEnforce(); }catch(e){} try{ vipSyncRecord(); }catch(e){} walletRefreshUI(); walletMaybeClaimWelcome(); };
       WALLET.ref.on('value', WALLET.handler, err=>{ WALLET.error = (err && err.code) || 'erè'; WALLET.loaded=true; walletRefreshUI(); });
       WALLET.reqRef = fbDb.ref('paymentRequests/'+u.uid);
       WALLET.reqHandler = snap=>{
@@ -6289,8 +6307,8 @@ function adminOwnerPanel(me){
   </div>
   ${ownerDepositStatsHtml()}
   <div class="card">
-    <div class="card-head"><span class="ic-wrap">${ICONS.key}</span><h3>Koulè premium achte</h3></div>
-    <p class="hint" style="text-align:left;margin-bottom:10px">Wè ki moun ki achte koulè premium epi retire aksè si w bezwen (pa gen ranbousman). Lis la sòti nan itilizatè ki gen peman nan istorik la.</p>
+    <div class="card-head"><span class="ic-wrap">${ICONS.key}</span><h3>Tout acha premium yo</h3></div>
+    <p class="hint" style="text-align:left;margin-bottom:10px">Wè ki moun ki achte kisa (koulè, pas VIP, estil ekriti, modèl dokiman, bilten, palmarès). Ou ka retire oswa remèt aksè pou koulè, pas VIP ak estil ekriti (pa gen ranbousman). Lòt yo se peman pou chak itilizasyon, yo parèt kòm istorik sèlman. Lis la soti nan itilizatè ki gen peman nan istorik la.</p>
     <button type="button" class="btn btn-ghost btn-pill" data-own-colors>Chaje lis la</button>
     <div id="own-colors-list" style="margin-top:10px"></div>
   </div>
