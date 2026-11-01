@@ -48,17 +48,18 @@
     --blue:#1877F2;
     --blue-dark:#166FE0;
     --blue-soft:#E7F0FE;
+    --blue-text:var(--blue);
     --accent:#C79A3B;
     --g1:#0AA4F5;--g2:#1877F2;--g3:#5B5BE0;
     --blue-rgb:24,119,242;--accent-rgb:199,154,59;--g1-rgb:10,164,245;--g3-rgb:91,91,224;
     --bg:#F0F2F5;
     --card:#FFFFFF;
     --text:#050505;
-    --text-soft:#65676B;
-    --text-faint:#8A8D91;
+    --text-soft:#5A5D62;
+    --text-faint:#6B6E73;
     --line:#DADDE1;
     --line-soft:#E4E6EA;
-    --red:#E4433D;
+    --red:#D13030;
     --gold:#C79A3B;
     --green:#42B72A;
     --purple:#7C5CDB;
@@ -99,7 +100,7 @@
   .pass-wrap{position:relative;}
   .pass-wrap input{padding-right:42px;}
   .pass-toggle{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:6px;color:var(--text-soft);cursor:pointer;padding:0;}
-  .pass-toggle:hover{background:var(--blue-soft);color:var(--blue);}
+  .pass-toggle:hover{background:var(--blue-soft);color:var(--blue-text);}
   .pass-toggle .ic{width:19px;height:19px;}
   .conn-dot{position:fixed;top:10px;right:10px;width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:9999;transition:background-color .2s, border-color .2s;}
   .conn-dot.is-online{background:var(--green);border-color:var(--green);box-shadow:0 0 0 3px rgba(66,183,42,.25);}
@@ -123,8 +124,8 @@
   .msg-thread-head{display:flex;align-items:center;gap:12px;padding:6px 8px 14px;cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:14px;}
   .msg-thread-head:hover{background:var(--line-soft);border-radius:10px 10px 0 0;}
   .msg-thread-head .nm{font-weight:700;font-size:15px;color:var(--text);}
-  .msg-thread-head .sub{font-size:12px;color:var(--blue);font-weight:600;}
-  .msg-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;margin-bottom:12px;}
+  .msg-thread-head .sub{font-size:12px;color:var(--blue-text);font-weight:600;}
+  .msg-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--blue-text);cursor:pointer;margin-bottom:12px;}
   .msg-bubbles{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding:6px 2px;margin-bottom:12px;}
   .online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-left:5px;vertical-align:middle;box-shadow:0 0 0 2px rgba(66,183,42,.2);}
   .verified-badge{display:inline-block;vertical-align:middle;margin-left:4px;flex-shrink:0;}
@@ -157,7 +158,7 @@
   .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
   .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
   .msg-select-toggle{background:transparent;border:none;color:var(--text-soft);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-left:auto;}
-  .msg-select-toggle:hover,.msg-select-toggle.active{background:var(--blue-soft);color:var(--blue);}
+  .msg-select-toggle:hover,.msg-select-toggle.active{background:var(--blue-soft);color:var(--blue-text);}
   .msg-row.selectable{cursor:pointer;}
   .msg-row .msg-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;align-self:center;display:flex;align-items:center;justify-content:center;background:#fff;}
   .msg-row.sel-checked .msg-check{background:var(--blue);border-color:var(--blue);}
@@ -178,7 +179,7 @@
   .msg-compose .btn-pill{border-radius:50%;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .msg-compose .btn-pill .ic{margin:0;}
   .msg-attach-btn{background:transparent;border:none;color:var(--text-soft);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
-  .msg-attach-btn:hover{background:var(--line-soft);color:var(--blue);}
+  .msg-attach-btn:hover{background:var(--line-soft);color:var(--blue-text);}
   .msg-compose-preview{position:relative;display:inline-flex;margin:0 0 8px;}
   .msg-compose-preview img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
   .msg-compose-preview button{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#1a1a2e;color:#fff;border:2px solid #fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -217,7 +218,7 @@
   .btn-primary:hover{background:var(--blue-dark);}
   .btn-primary:active{transform:translateY(1px);}
   .btn-block{width:100%;}
-  .btn-ghost{background:var(--blue-soft);color:var(--blue);}
+  .btn-ghost{background:var(--blue-soft);color:var(--blue-text);}
   .btn-ghost:hover{background:#DCEAFE;}
   .divider-word{display:flex;align-items:center;gap:10px;color:var(--text-faint);font-size:12.5px;margin:16px 0;}
   .divider-word::before,.divider-word::after{content:"";flex:1;height:1px;background:var(--line);}
@@ -236,7 +237,7 @@
   .fb-nav-mid{display:flex;align-items:center;gap:4px;}
   .nav-icon-btn{position:relative;width:64px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--text-soft);}
   .nav-icon-btn:hover{background:var(--bg);}
-  .nav-icon-btn.active{color:var(--blue);}
+  .nav-icon-btn.active{color:var(--blue-text);}
   .nav-icon-btn.active::after{content:"";position:absolute;bottom:0;left:8px;right:8px;height:3px;background:var(--blue);border-radius:3px 3px 0 0;}
   .nav-icon-btn svg{width:22px;height:22px;}
   .fb-nav-right{display:flex;align-items:center;gap:8px;}
@@ -253,7 +254,7 @@
   .sb-profile .nm{font-size:14.5px;font-weight:700;color:var(--text);line-height:1.3;}
   .sb-profile .rl{font-size:12px;color:var(--text-soft);line-height:1.4;}
   .sb-link{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:8px;font-size:14.5px;font-weight:600;color:var(--text);}
-  .sb-link .ic-wrap{width:32px;height:32px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .sb-link .ic-wrap{width:32px;height:32px;border-radius:50%;background:var(--blue-soft);color:var(--blue-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .sb-link:hover{background:var(--bg);}
   .sb-link.active{background:var(--blue-soft);}
   .sb-link.active .ic-wrap{background:var(--blue);color:#fff;}
@@ -282,7 +283,7 @@
   /* "Klasik" se konpòtman default ki deja egziste anwo a (okenn klas
      siplemantè bezwen). Lòt 4 estil yo aktive selon klas html.navstyle-*. */
   html.navstyle-pill .fb-bottom-nav .nav-icon-btn{border-radius:999px;margin:2px 3px;height:48px;}
-  html.navstyle-pill .fb-bottom-nav .nav-icon-btn.active{background:var(--blue-soft);color:var(--blue);}
+  html.navstyle-pill .fb-bottom-nav .nav-icon-btn.active{background:var(--blue-soft);color:var(--blue-text);}
   html.navstyle-pill .fb-bottom-nav .nav-icon-btn.active::after{display:none;}
   html.navstyle-circle .fb-bottom-nav .nav-icon-btn{gap:4px;}
   html.navstyle-circle .fb-bottom-nav .nav-icon-btn svg{background:var(--bg);border-radius:50%;padding:6px;width:30px;height:30px;box-sizing:content-box;}
@@ -291,7 +292,7 @@
   @media (max-width:400px){ html.navstyle-circle .fb-bottom-nav .nav-icon-btn svg{padding:4px;width:24px;height:24px;} }
   html.navstyle-floating .fb-bottom-nav{gap:4px;padding-top:8px;}
   html.navstyle-floating .fb-bottom-nav .nav-icon-btn{border-radius:16px;transition:transform .12s ease;}
-  html.navstyle-floating .fb-bottom-nav .nav-icon-btn.active{background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,.18);transform:translateY(-5px);color:var(--blue);}
+  html.navstyle-floating .fb-bottom-nav .nav-icon-btn.active{background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,.18);transform:translateY(-5px);color:var(--blue-text);}
   html.navstyle-floating .fb-bottom-nav .nav-icon-btn.active::after{display:none;}
   html.navstyle-minimal .fb-bottom-nav .nav-icon-btn{height:44px;}
   html.navstyle-minimal .fb-bottom-nav .nav-icon-btn span.lbl{display:none;}
@@ -310,7 +311,7 @@
 
   .card{background:var(--card);border:1px solid var(--line-soft);border-radius:14px;box-shadow:var(--shadow);padding:20px 20px 22px;margin-bottom:16px;transition:box-shadow .18s ease;}
   .card-head{display:flex;align-items:center;gap:11px;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line-soft);}
-  .card-head .ic-wrap{width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--blue-soft),var(--blue-soft) 60%,rgba(24,119,242,.18));color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .card-head .ic-wrap{width:32px;height:32px;border-radius:9px;background:linear-gradient(150deg,var(--blue-soft),var(--blue-soft) 60%,rgba(24,119,242,.18));color:var(--blue-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .card-head h3{margin:0;font-family:'Fraunces',Georgia,serif;font-size:16px;color:var(--text);font-weight:700;line-height:1.3;letter-spacing:-.005em;}
   .acc-card .card-head{cursor:pointer;margin-bottom:0;border-bottom:none;user-select:none;}
   .acc-card .card-head h3{flex:1;}
@@ -323,7 +324,7 @@
   .stat-box{background:var(--card);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow);padding:16px 16px 15px;position:relative;overflow:hidden;transition:transform .15s ease,box-shadow .15s ease;}
   .stat-box::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--gold));}
   .stat-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-pop);}
-  .stat-box .stat-ic{width:34px;height:34px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+  .stat-box .stat-ic{width:34px;height:34px;border-radius:50%;background:var(--blue-soft);color:var(--blue-text);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
   .stat-box.sb-green::before{background:linear-gradient(90deg,var(--green),#8CE07A);}
   .stat-box.sb-green .stat-ic{background:var(--green-soft);color:var(--green);}
   .stat-box.sb-purple::before{background:linear-gradient(90deg,var(--purple),#B6A2EE);}
@@ -346,7 +347,7 @@
   .class-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--blue),var(--gold));opacity:.85;}
   .class-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-pop);border-color:var(--line);}
   .class-card-top{display:flex;align-items:center;gap:11px;min-width:0;}
-  .class-card-ic{width:38px;height:38px;border-radius:10px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .class-card-ic{width:38px;height:38px;border-radius:10px;background:var(--blue-soft);color:var(--blue-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .class-card-name{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:var(--text);word-break:break-word;line-height:1.3;}
   .class-card-teacher{font-size:12.5px;color:var(--text-soft);margin-top:2px;word-break:break-word;line-height:1.4;}
   .class-card-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
@@ -369,7 +370,7 @@
   .tab-strip{display:flex;gap:2px;margin-bottom:18px;background:var(--card);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow);padding:6px;flex-wrap:wrap;}
   .tab-btn{display:flex;align-items:center;gap:7px;padding:10px 15px;font-size:13.5px;font-weight:700;color:var(--text-soft);background:none;border:none;border-radius:8px;transition:background .15s,color .15s,box-shadow .15s;}
   .tab-btn:hover{background:var(--bg);}
-  .tab-btn.active{color:var(--blue);background:var(--blue-soft);box-shadow:inset 0 0 0 1px rgba(24,119,242,.25);}
+  .tab-btn.active{color:var(--blue-text);background:var(--blue-soft);box-shadow:inset 0 0 0 1px rgba(24,119,242,.25);}
   .grade-input{width:60px;padding:6px 7px;border:1px solid var(--line);border-radius:6px;text-align:center;font-size:13.5px;}
   .grade-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
   .subject-edit-input{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;background:var(--card);color:var(--text);width:100%;min-width:110px;}
@@ -389,7 +390,7 @@
   .search-clear-btn.hidden{display:none;}
   .result-count{font-size:12.5px;color:var(--text-faint);font-weight:600;margin:-4px 0 10px;}
   @media (max-width:600px){ .search-filter-bar{flex-direction:column;align-items:stretch;} .search-filter-bar .term-select{width:100%;} }
-  .avg-cell{font-weight:800;color:var(--blue);}
+  .avg-cell{font-weight:800;color:var(--blue-text);}
   .rank-pill{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;background:var(--bg);color:var(--text-soft);border-radius:20px;font-weight:800;font-size:12.5px;}
   .rank-pill.top1{background:linear-gradient(145deg,#F3D06B,var(--gold));color:#4A3A0A;}
   .rank-pill.top2{background:#DCE2EC;color:#33475b;}
@@ -398,7 +399,7 @@
   .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--line-soft);}
   .name-cell-txt{font-weight:600;}
 
-  .btn-small{padding:7px 13px;font-size:13px;font-weight:700;border-radius:16px;border:none;background:var(--blue-soft);color:var(--blue);display:inline-flex;align-items:center;gap:6px;transition:background .15s,transform .1s;}
+  .btn-small{padding:7px 13px;font-size:13px;font-weight:700;border-radius:16px;border:none;background:var(--blue-soft);color:var(--blue-text);display:inline-flex;align-items:center;gap:6px;transition:background .15s,transform .1s;}
   .btn-small:hover{background:#DCEAFE;transform:translateY(-1px);}
   .btn-danger-outline{background:#FDECEC;color:var(--red);}
   .btn-danger-outline:hover{background:#FBDCDB;}
@@ -423,7 +424,7 @@
   /* ============ DARK MODE ============ */
   html.theme-dark{
     --bg:#18191A; --card:#242526; --text:#E4E6EB; --text-soft:#B0B3B8; --text-faint:#8A8D91;
-    --line:#3A3B3C; --line-soft:#3A3B3C; --blue-soft:#1D2B45;
+    --line:#3A3B3C; --line-soft:#3A3B3C; --blue-soft:#1D2B45; --red:#E4433D;
   }
   html.theme-dark .code-chip{background:#3A2E0E;color:#F0DFA6;border-color:#5A4A1A;}
   html.theme-dark .btn-danger-outline{background:#3A1E1E;}
@@ -467,7 +468,7 @@
 
   /* ============ FICH ELÈV ============ */
   .fiche-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px;position:relative;padding-right:44px;}
-  .fiche-edit-btn{position:absolute;top:0;right:0;width:34px;height:34px;border-radius:50%;border:none;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85;box-shadow:0 1px 4px rgba(0,0,0,.14);padding:0;}
+  .fiche-edit-btn{position:absolute;top:0;right:0;width:34px;height:34px;border-radius:50%;border:none;background:var(--blue-soft);color:var(--blue-text);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85;box-shadow:0 1px 4px rgba(0,0,0,.14);padding:0;}
   .fiche-edit-btn:hover,.fiche-edit-btn:active{opacity:1;}
   .fiche-edit-btn svg{width:17px;height:17px;}
   .se-box{text-align:left;max-width:440px;max-height:90vh;overflow-y:auto;}
@@ -497,7 +498,7 @@
   .dash-row:last-child{border-bottom:none;}
   .dash-row .drn{font-size:14px;font-weight:700;color:var(--text);line-height:1.3;}
   .dash-row .drm{font-size:12px;color:var(--text-soft);margin-top:1px;line-height:1.4;}
-  .dash-avg-big{font-size:34px;font-weight:800;color:var(--blue);line-height:1;font-variant-numeric:tabular-nums;}
+  .dash-avg-big{font-size:34px;font-weight:800;color:var(--blue-text);line-height:1;font-variant-numeric:tabular-nums;}
   .dash-avg-sub{font-size:12.5px;color:var(--text-soft);margin-top:6px;line-height:1.4;}
   .term-evol-label{width:112px;flex-shrink:0;font-size:12px;color:var(--text-soft);font-weight:700;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
@@ -1099,7 +1100,7 @@
   .dlg-overlay.dlg-show .dlg-box{transform:translateY(0) scale(1);}
   .dlg-icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
   .dlg-icon svg{width:24px;height:24px;}
-  .dlg-icon.dlg-info{background:var(--blue-soft);color:var(--blue);}
+  .dlg-icon.dlg-info{background:var(--blue-soft);color:var(--blue-text);}
   .dlg-icon.dlg-warn{background:#FCF0DC;color:var(--gold);}
   .dlg-icon.dlg-danger{background:#FBE6E5;color:var(--red);}
   .dlg-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:9px;line-height:1.3;letter-spacing:-.01em;}
@@ -1121,7 +1122,7 @@
   .toast-container{position:fixed;top:16px;right:16px;z-index:99998;display:flex;flex-direction:column;gap:10px;max-width:340px;width:calc(100% - 32px);}
   .toast{background:var(--card);border-radius:12px;box-shadow:var(--shadow-pop);border:1px solid var(--line-soft);display:flex;align-items:flex-start;gap:11px;padding:13px 14px;cursor:pointer;opacity:0;transform:translateX(24px);transition:opacity .18s ease, transform .18s ease;}
   .toast.toast-show{opacity:1;transform:translateX(0);}
-  .toast-icon{width:36px;height:36px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .toast-icon{width:36px;height:36px;border-radius:50%;background:var(--blue-soft);color:var(--blue-text);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .toast-icon svg{width:19px;height:19px;}
   .toast-body{flex:1;min-width:0;}
   .toast-title{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:2px;}
@@ -1137,15 +1138,15 @@
   .help-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;}
   .help-actions .btn{flex:1 1 170px;}
   .help-note{font-size:12.5px;color:var(--text-soft);line-height:1.6;margin:0 0 14px;}
-  .help-mail{font-weight:700;color:var(--blue);word-break:break-all;}
+  .help-mail{font-weight:700;color:var(--blue-text);word-break:break-all;}
 
   /* ============ BALANS & PEMAN (ajoute) ============ */
   .wal-btn{position:relative;}
   .wal-badge{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:9px;display:none;align-items:center;justify-content:center;padding:0 4px;}
-  .wal-balance{font-size:34px;font-weight:800;color:var(--blue);line-height:1.2;}
+  .wal-balance{font-size:34px;font-weight:800;color:var(--blue-text);line-height:1.2;}
   .wal-sub{font-size:13px;color:var(--text-soft);margin-top:4px;line-height:1.5;}
   .wal-num{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--blue-soft);border-radius:10px;padding:12px 14px;margin:0 0 16px;}
-  .wal-num .n{font-size:20px;font-weight:800;color:var(--blue);letter-spacing:.02em;}
+  .wal-num .n{font-size:20px;font-weight:800;color:var(--blue-text);letter-spacing:.02em;}
   .wal-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
   .wal-chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;}
   .wal-chip.on{background:var(--blue);border-color:var(--blue);color:#fff;}
@@ -1156,7 +1157,7 @@
   .vip-perks li{margin-bottom:2px;}
   .wal-price{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:14px;line-height:1.45;}
   .wal-price:last-child{border-bottom:none;}
-  .wal-price .pr{font-weight:800;color:var(--blue);white-space:nowrap;}
+  .wal-price .pr{font-weight:800;color:var(--blue-text);white-space:nowrap;}
   .wal-req{border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14px;line-height:1.5;}
   .wal-req-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;font-size:16px;}
   .wal-st{font-size:11.5px;font-weight:800;border-radius:999px;padding:3px 10px;}
@@ -1221,7 +1222,7 @@
   html.theme-dark .fb-nav{background:rgba(30,31,32,.84);}
   .fb-nav-left .bn{font-family:'Fraunces',Georgia,serif;font-size:17px;letter-spacing:-.01em;}
   .fb-nav-left .logo{border-radius:12px;overflow:hidden;}
-  .icon-round-btn{border-radius:14px;background:rgba(var(--blue-rgb),.09);color:var(--blue);}
+  .icon-round-btn{border-radius:14px;background:rgba(var(--blue-rgb),.09);color:var(--blue-text);}
   .icon-round-btn:hover{background:rgba(var(--blue-rgb),.16);}
   .nav-avatar{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--g2);}
   .fb-nav-mid .nav-icon-btn{border-radius:14px;}
@@ -1283,14 +1284,14 @@
   /* Kat : papye plat ak yon bòdi, san lonbraj sosyal */
   .card{border-radius:var(--radius);border:1px solid var(--line);box-shadow:none;}
   .card-head{border-bottom:1px solid var(--line-soft);}
-  .card-head .ic-wrap{border-radius:4px;background:var(--blue-soft);color:var(--blue);}
+  .card-head .ic-wrap{border-radius:4px;background:var(--blue-soft);color:var(--blue-text);}
   .card-head h3{font-size:16.5px;}
   /* Bouton : plen, kwen kare, pa gen degrade ni limyè */
   .btn-pill{border-radius:8px;}
   .btn-primary{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 52%,var(--g3) 100%);box-shadow:0 8px 20px rgba(var(--blue-rgb),.28);}
   .btn-primary:hover:not(:disabled){filter:brightness(1.07);background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 52%,var(--g3) 100%);}
   .btn-primary:active:not(:disabled){transform:translateY(1px);box-shadow:0 4px 12px rgba(var(--blue-rgb),.26);}
-  .btn-ghost{background:transparent;color:var(--blue);box-shadow:inset 0 0 0 1px var(--line);}
+  .btn-ghost{background:transparent;color:var(--blue-text);box-shadow:inset 0 0 0 1px var(--line);}
   .btn-ghost:hover{background:var(--blue-soft);}
   .field input,.field select,.field textarea{border-radius:6px;}
   /* Ba anlè : lank, pa blan fle ak degrade */
@@ -1394,7 +1395,7 @@
   .wsec-btn{flex:1;height:46px;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:inherit;}
   .wsec-btn-no{background:var(--bg);color:var(--text-soft);}
   .wsec-btn-ok{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 52%,var(--g3) 100%);color:#fff;box-shadow:0 6px 16px rgba(var(--blue-rgb),.28);}
-  .wsec-forgot{display:block;width:100%;margin-top:14px;padding:8px 4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--blue);font-family:inherit;text-decoration:underline;text-underline-offset:3px;}
+  .wsec-forgot{display:block;width:100%;margin-top:14px;padding:8px 4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--blue-text);font-family:inherit;text-decoration:underline;text-underline-offset:3px;}
   .wsec-rec-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
   .wsec-rec-card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 44px rgba(var(--blue-rgb),.14);padding:26px 22px 20px;text-align:center;}
   .wsec-rec-form{text-align:left;margin-top:4px;}
@@ -1405,7 +1406,7 @@
   .msg-action-btn{padding:16px 22px;font-size:15.5px;font-weight:600;border-bottom:1px solid var(--line-soft);transition:background .12s;}
   .msg-action-btn:active{background:var(--blue-soft);}
   .msg-action-btn.danger{color:var(--red);}
-  .msg-action-btn.cancel{margin-top:10px;background:var(--card);border-radius:20px;border:none;text-align:center;font-weight:700;color:var(--blue);padding:16px;box-shadow:0 10px 26px rgba(16,21,46,.24);}
+  .msg-action-btn.cancel{margin-top:10px;background:var(--card);border-radius:20px;border:none;text-align:center;font-weight:700;color:var(--blue-text);padding:16px;box-shadow:0 10px 26px rgba(16,21,46,.24);}
   .msg-action-group .msg-action-btn:last-child{border-bottom:none;}
 
   /* ===== Animasyon touche (retou vizyèl lè w peze yon bagay) ===== */
@@ -1501,7 +1502,7 @@ const FIREBASE_ENABLED = !!(FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.st
 /* Nimewo vèsyon app la — ogmante l (egzanp 1.2, 1.3...) chak fwa gen yon nouvo
    kopi fichye a soti, pou ka toujou idantifye ki vèsyon k ap itilize. Li parèt
    tou dousman anba paj koneksyon an ak nan Paramèt admin la. */
-const APP_VERSION = '2.26.10.73';
+const APP_VERSION = '2.26.10.74';
 let fbAuth = null, fbDb = null;
 /* Si inisyalizasyon Firebase echwe, nou konsève yon rezon klè pou nou ka
    montre itilizatè a KISA ki pase (olye yon mesaj jenerik "pa konfigire"
@@ -2627,9 +2628,14 @@ function applyUserColors(){
   let p = ucHex(c.primary) || COLOR_DEFAULT.primary;
   const a = ucHex(c.accent) || COLOR_DEFAULT.accent;
   const dark = root.classList.contains('theme-dark');
-  let g = 0; while(ucLum(p) > 0.45 && g++ < 12) p = ucMix(p,'#000000',.12);   /* tèks blan toujou li sou koulè a */
+  let g = 0; while(ucLum(p) > 0.30 && g++ < 12) p = ucMix(p,'#000000',.12);   /* tèks blan toujou li sou koulè a */
   g = 0; if(dark){ while(ucLum(p) < 0.08 && g++ < 12) p = ucMix(p,'#FFFFFF',.14); }  /* pa twò fonse sou fon nwa */
+  /* Koulè pou TÈKS/lyen (pa fon bouton) : toujou lizib — fonse sou fon blan, klere sou fon nwa (kontras >= 4.5:1) */
+  let pt = p; g = 0;
+  if(dark){ while(ucLum(pt) < 0.26 && g++ < 14) pt = ucMix(pt,'#FFFFFF',.14); }
+  else { while(ucLum(pt) > 0.18 && g++ < 14) pt = ucMix(pt,'#000000',.10); }
   const st = root.style;
+  st.setProperty('--blue-text', pt);
   st.setProperty('--blue', p);
   st.setProperty('--blue-dark', ucMix(p,'#000000',.12));
   st.setProperty('--blue-soft', dark ? ucMix(p,'#242526',.78) : ucMix(p,'#FFFFFF',.88));
@@ -4609,7 +4615,7 @@ function viewSchoolGate(){
         <p class="hint" style="text-align:left;margin-bottom:18px">Aparèy sa a poko janm itilize ak yon lekòl. Nou jwenn yon lekòl ki deja konfigire sou sistèm nan : <strong>${escapeHtml(name)}</strong>.</p>
         <button class="btn btn-primary btn-pill btn-block" id="gate-join-legacy" type="button" style="margin-bottom:10px">Mwen fè pati "${escapeHtml(name)}"</button>
         <button class="btn btn-ghost btn-pill btn-block" id="gate-new-school" type="button" style="margin-bottom:10px">Kreye yon lòt lekòl toutafè separe</button>
-        <p class="hint" style="text-align:left;margin-top:6px">Si w gen yon Kòd Lekòl (pou konekte ak yon lekòl ki pa "${escapeHtml(name)}"), <a id="gate-use-code" style="cursor:pointer;color:var(--blue);font-weight:600">klike la a pou antre l</a>.</p>
+        <p class="hint" style="text-align:left;margin-top:6px">Si w gen yon Kòd Lekòl (pou konekte ak yon lekòl ki pa "${escapeHtml(name)}"), <a id="gate-use-code" style="cursor:pointer;color:var(--blue-text);font-weight:600">klike la a pou antre l</a>.</p>
       </div>
     </div>
   </div>`;
@@ -4649,7 +4655,7 @@ function viewLogin(){
               ${passField('l-pass','Kòd sekrè','required autocomplete="current-password"')}
               ${ui.errors.login? `<p class="error-msg">${ui.errors.login}</p>`:''}
               <button class="btn btn-primary btn-pill btn-block" type="submit">Antre</button>
-              <p class="hint" style="text-align:right;margin:10px 0 0"><a id="forgot-pass-link" style="cursor:pointer;color:var(--blue);font-weight:600">Kòd bliye?</a></p>
+              <p class="hint" style="text-align:right;margin:10px 0 0"><a id="forgot-pass-link" style="cursor:pointer;color:var(--blue-text);font-weight:600">Kòd bliye?</a></p>
             </form>
           ` : `
             <form id="signup-admin-form">
@@ -4673,9 +4679,9 @@ function viewLogin(){
               ${passField('tl-pass','Kòd sekrè','required autocomplete="current-password"')}
               ${ui.errors.login? `<p class="error-msg">${ui.errors.login}</p>`:''}
               <button class="btn btn-primary btn-pill btn-block" type="submit">Antre</button>
-              <p class="hint" style="text-align:right;margin:10px 0 0"><a id="forgot-pass-link-t" style="cursor:pointer;color:var(--blue);font-weight:600">Kòd bliye?</a></p>
+              <p class="hint" style="text-align:right;margin:10px 0 0"><a id="forgot-pass-link-t" style="cursor:pointer;color:var(--blue-text);font-weight:600">Kòd bliye?</a></p>
             </form>
-            <p class="hint" style="text-align:left;margin-top:10px">Premye fwa? Ou dwe <a id="teacher-goto-claim" style="cursor:pointer;color:var(--blue);font-weight:600">konfigire kont ou</a> ak kòd pwofesè a anvan.</p>
+            <p class="hint" style="text-align:left;margin-top:10px">Premye fwa? Ou dwe <a id="teacher-goto-claim" style="cursor:pointer;color:var(--blue-text);font-weight:600">konfigire kont ou</a> ak kòd pwofesè a anvan.</p>
           ` : `
             <form id="teacher-claim-form">
               <div class="field"><label>Kòd pwofesè ou a</label><input id="tc-code" required style="text-transform:uppercase" placeholder="Ex: 7F3K9Q"></div>
@@ -5043,7 +5049,7 @@ function adminTeacherDetail(teacher){
   const assignedClasses = classesForTeacher(teacher.id);
   const avStyle = teacher.photo ? `background-image:url('${teacher.photo}')` : `background:${colorFor(teacherDisplayName(teacher))}`;
   return `
-  <a id="back-to-teachers" style="cursor:pointer;font-size:13px;color:var(--blue);font-weight:700;">← Pwofesè yo</a>
+  <a id="back-to-teachers" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Pwofesè yo</a>
   <div class="page-head" style="margin-top:6px">
     <h1 class="page-title">${escapeHtml(teacherDisplayName(teacher))}</h1>
     <p class="page-sub">Pwofil inik pwofesè a — kòd koneksyon, enfòmasyon pèsonèl ak tout klas/matyè li anseye.</p>
@@ -5056,7 +5062,7 @@ function adminTeacherDetail(teacher){
     <div class="card" style="background:var(--blue-soft);border:none;box-shadow:none;margin:0 0 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
-          <div style="font-size:12.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em">Kòd koneksyon pwofesè a</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--blue-text);text-transform:uppercase;letter-spacing:.04em">Kòd koneksyon pwofesè a</div>
           <div style="font-size:28px;font-weight:800;letter-spacing:.08em;color:var(--text);margin-top:2px" id="teacher-code-display">${teacher.code}</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -5326,7 +5332,7 @@ function academicYearManagerHtml(){
         const st = yearStats(y);
         const isActive = y===active;
         return `<tr>
-          <td>${escapeHtml(y)} ${isActive? '<strong style="color:var(--blue)">(aktif)</strong>':''}</td>
+          <td>${escapeHtml(y)} ${isActive? '<strong style="color:var(--blue-text)">(aktif)</strong>':''}</td>
           <td style="color:var(--text-soft);font-size:12.5px">${st.classes} klas · ${st.students} elèv · ${st.notes} nòt</td>
           <td style="text-align:right;white-space:nowrap">
             ${isActive? '' : `<button class="btn-small" data-switch-year="${escapeHtml(y)}">Fè l vin aktif</button>`}
@@ -6718,7 +6724,7 @@ function adminSettings(){
       ${(DATA.admins||[]).map(a=>`
       <tr>
         <td>${escapeHtml(a.name)}${hasBlueBadge(a)?verifiedBadgeHtml():''}</td>
-        <td>${escapeHtml(a.username)}${a.username===me.username? ' <strong style="color:var(--blue)">(ou)</strong>':''}</td>
+        <td>${escapeHtml(a.username)}${a.username===me.username? ' <strong style="color:var(--blue-text)">(ou)</strong>':''}</td>
         <td style="text-align:right">${a.username!==me.username? `<button class="btn-small btn-danger-outline" data-del-admin="${a.id}">${ICONS.trash}Retire</button>` : ''}</td>
       </tr>`).join('')}
     </tbody></table>
@@ -6884,8 +6890,8 @@ function classManager(cls, role){
 
   return `
   <div class="page-head">
-    ${role==='admin' ? `<a id="back-to-classes" style="cursor:pointer;font-size:13px;color:var(--blue);font-weight:700;">← Klas yo</a>`:''}
-    ${role==='teacher' && classesForTeacher(session.teacherId).length>1 ? `<a id="back-to-teacher-home" style="cursor:pointer;font-size:13px;color:var(--blue);font-weight:700;">← Klas mwen</a>` : ''}
+    ${role==='admin' ? `<a id="back-to-classes" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas yo</a>`:''}
+    ${role==='teacher' && classesForTeacher(session.teacherId).length>1 ? `<a id="back-to-teacher-home" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas mwen</a>` : ''}
     <h1 class="page-title" style="margin-top:6px">${escapeHtml(cls.name)}</h1>
     <p class="page-sub">Pwofesè: ${escapeHtml(classTeacherLabel(cls))}${(role==='admin' && cls.teacherMode!=='multiple' && cls.teacherId) ? ` · Kòd koneksyon pwofesè a: <span class="code-chip">${(findTeacherById(cls.teacherId)||{}).code||'—'}</span>` : ''} · Kòd klas (referans): <span class="code-chip">${cls.code}</span></p>
   </div>
