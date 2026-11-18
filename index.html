@@ -157,6 +157,19 @@
   .typing-label{font-size:12px;color:var(--text-soft);font-style:italic;}
   @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.45;}30%{transform:translateY(-4px);opacity:1;}}
   .msg-photo{display:block;max-width:240px;max-height:260px;width:100%;border-radius:11px;margin-bottom:6px;cursor:zoom-in;object-fit:cover;}
+  .msg-photo-doc{display:flex;align-items:center;gap:11px;width:100%;min-width:200px;padding:9px 11px;margin-bottom:4px;border:none;border-radius:11px;cursor:pointer;text-align:left;font-family:inherit;background:rgba(0,0,0,.07);color:inherit;}
+  .msg-bubble.mine .msg-photo-doc{background:rgba(255,255,255,.18);}
+  .msg-photo-doc .mpd-ic{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .msg-bubble.mine .msg-photo-doc .mpd-ic{background:#fff;color:var(--blue);}
+  .msg-photo-doc .mpd-tx{display:flex;flex-direction:column;min-width:0;line-height:1.3;}
+  .msg-photo-doc .mpd-tx b{font-size:14px;font-weight:700;}
+  .msg-photo-doc .mpd-tx small{font-size:12px;opacity:.75;}
+  .photo-viewer{position:fixed;inset:0;z-index:999;background:#000;display:flex;flex-direction:column;animation:msgRowIn .18s ease both;}
+  .photo-viewer .pv-top{display:flex;align-items:center;gap:14px;padding:max(14px,env(safe-area-inset-top)) 14px 10px;color:#fff;}
+  .photo-viewer .pv-close{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .photo-viewer .pv-title{font-size:16px;font-weight:600;}
+  .photo-viewer .pv-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px 10px max(18px,env(safe-area-inset-bottom));}
+  .photo-viewer .pv-stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;}
   .img-lightbox{position:fixed;inset:0;background:rgba(10,10,15,.88);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out;padding:24px;}
   .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
   .msg-select-toggle{background:transparent;border:none;color:var(--text-soft);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-left:auto;}
@@ -2165,8 +2178,8 @@ function renderMsgBubble(m, role, teacher){
   const admName = senderAdminRec && senderAdminRec.name ? escapeHtml(senderAdminRec.name) : 'Administration';
   const label = (mine ? 'Ou' : (role==='admin'? escapeHtml(teacherDisplayName(teacher)||'Pwofesè') : admName)) + (hasBlueBadge(senderAdminRec) ? verifiedBadgeHtml() : '');
   const editedTag = m.editedAt ? ` · <span class="edited-tag">Modifye a ${fmtTimeOnly(m.editedAt)}</span>` : '';
-  const photoOnly = m.photo && !m.text;
-  const photoHtml = m.photo ? `<img class="msg-photo" src="${m.photo}" alt="Foto" data-msg-photo-view="${m.id}">` : '';
+  const photoOnly = false;   /* foto parèt kòm dokiman : toujou nan yon bil */
+  const photoHtml = m.photo ? `<button type="button" class="msg-photo-doc" data-msg-photo-view="${m.id}" data-photo-src="${m.photo}"><span class="mpd-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><circle cx="10" cy="13" r="1.4"/><path d="M7.5 18l3.2-3.2 2.3 2.3 1.7-1.7 2.3 2.6"/></svg></span><span class="mpd-tx"><b>Foto</b><small>Klike pou louvri</small></span></button>` : '';
   const ticksHtml = mine ? msgStatusTicksHtml(m, isRecipientOnline(role, teacher)) : '';
   const selMode = !!ui.msgSelectMode;
   const checked = selMode && (ui.msgSelectedIds||[]).includes(m.id);
@@ -2256,10 +2269,14 @@ function wireMessageThread(teacherId, role, rerender){
   wireTypingInput(teacherId, role);
   document.querySelectorAll('[data-msg-photo-view]').forEach(img=>img.addEventListener('click', (e)=>{
     e.stopPropagation();
+    const src = img.getAttribute('data-photo-src') || img.getAttribute('src');
     const overlay = document.createElement('div');
-    overlay.className = 'img-lightbox';
-    overlay.innerHTML = `<img src="${img.getAttribute('src')}" alt="Foto">`;
-    overlay.addEventListener('click', ()=>overlay.remove());
+    overlay.className = 'photo-viewer';
+    overlay.innerHTML = `<div class="pv-top"><button type="button" class="pv-close" aria-label="Fèmen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="pv-title">Foto</span></div><div class="pv-stage"><img src="${src}" alt="Foto"></div>`;
+    const close = ()=>{ overlay.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (ev)=>{ if(ev.key==='Escape') close(); };
+    overlay.addEventListener('click', (ev)=>{ if(ev.target.tagName!=='IMG') close(); });
+    document.addEventListener('keydown', onKey);
     document.body.appendChild(overlay);
   }));
   document.querySelectorAll('[data-msg-id]').forEach(el=>el.addEventListener('click', (e)=>{
