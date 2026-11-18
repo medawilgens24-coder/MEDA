@@ -6984,6 +6984,14 @@ function adminSettings(){
     </form>
   </div>
   <div class="card">
+    <div class="card-head"><span class="ic-wrap">${ICONS.grid}</span><h3>Non klas yo</h3></div>
+    ${DATA.classes.length===0 ? `<div class="empty-state">Poko gen klas.</div>` : `
+    <form id="class-rename-form" class="inline-form">
+      ${DATA.classes.map(c=>`<div class="field"><label>Non klas la</label><input data-rename-class="${c.id}" value="${escapeHtml(c.name)}" maxlength="60"></div>`).join('')}
+      <button class="btn btn-primary btn-pill" type="submit">Anrejistre non klas yo</button>
+    </form>`}
+  </div>
+  <div class="card">
     <div class="card-head"><span class="ic-wrap">${ICONS.idcard}</span><h3>Kòd Lekòl</h3></div>
     ${getSchoolId() ? `
     <div class="theme-toggle-row">
@@ -7233,10 +7241,6 @@ function classManager(cls, role){
     ${role==='admin' ? `<a id="back-to-classes" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas yo</a>`:''}
     ${role==='teacher' && classesForTeacher(session.teacherId).length>1 ? `<a id="back-to-teacher-home" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas mwen</a>` : ''}
     <h1 class="page-title" style="margin-top:6px">${escapeHtml(cls.name)}</h1>
-    <form id="rename-class-form" class="inline-form" style="margin:4px 0 10px;gap:8px;align-items:flex-end">
-      <div class="field" style="margin:0;flex:1;min-width:160px"><label>Chanje non klas la</label><input id="rename-class-input" value="${escapeHtml(cls.name)}" maxlength="60"></div>
-      <button class="btn btn-primary btn-pill" type="submit">Anrejistre non an</button>
-    </form>
     <p class="page-sub">Pwofesè: ${escapeHtml(classTeacherLabel(cls))}${(role==='admin' && cls.teacherMode!=='multiple' && cls.teacherId) ? ` · Kòd koneksyon pwofesè a: <span class="code-chip">${(findTeacherById(cls.teacherId)||{}).code||'—'}</span>` : ''} · Kòd klas (referans): <span class="code-chip">${cls.code}</span></p>
   </div>
   <div class="tab-strip">
@@ -10042,6 +10046,22 @@ function wireEvents(view){
         const upd = ()=>{ const on = m.value!=='blank'; pt.textContent = on ? t.value : ''; pd.textContent = on ? d.value : ''; };
         [t,d].forEach(x=>x.addEventListener('input', upd)); m.addEventListener('change', upd); upd();
       })();
+      const classRenameForm = document.getElementById('class-rename-form');
+      if(classRenameForm) classRenameForm.addEventListener('submit', async e=>{
+        e.preventDefault();
+        const inputs = Array.from(classRenameForm.querySelectorAll('[data-rename-class]'));
+        const names = inputs.map(i=>i.value.trim());
+        if(names.some(n=>!n)){ await showAlert('Non klas la pa ka vid.'); return; }
+        const seen = new Set(); let dup = false;
+        names.forEach(n=>{ const k=normSearch(n); if(seen.has(k)) dup=true; seen.add(k); });
+        if(dup && !await showConfirm('Gen de klas ki gen menm non. Kontinye kanmenm?')) return;
+        let changed = 0;
+        inputs.forEach((inp,i)=>{ const c = findClass(inp.dataset.renameClass); if(c && c.name!==names[i]){ c.name = names[i]; changed++; } });
+        if(!changed){ await showAlert('Okenn non pa chanje.'); return; }
+        await saveData();
+        await showAlert('Non klas yo anrejistre.');
+        render('admin');
+      });
       document.getElementById('school-form').addEventListener('submit', async e=>{
         e.preventDefault();
         const school = ensureSchool();
@@ -10361,19 +10381,6 @@ function wireEvents(view){
 }
 
 function wireClassManager(cls, role){
-  const renameForm = document.getElementById('rename-class-form');
-  if(renameForm) renameForm.addEventListener('submit', async e=>{
-    e.preventDefault();
-    const newName = document.getElementById('rename-class-input').value.trim();
-    if(!newName){ await showAlert('Non klas la pa ka vid.'); return; }
-    if(newName===cls.name) return;
-    const dup = DATA.classes.some(c=>c.id!==cls.id && normSearch(c.name)===normSearch(newName));
-    if(dup && !await showConfirm('Gen yon lòt klas ki deja gen non sa a. Kontinye kanmenm?')) return;
-    cls.name = newName;
-    await saveData();
-    await showAlert('Non klas la chanje.');
-    role==='admin' ? render('admin') : render('teacher');
-  });
   document.querySelectorAll('[data-ctab]').forEach(b=>b.addEventListener('click', ()=>{ ui.classTab=b.dataset.ctab; role==='admin'? render('admin') : render('teacher'); }));
   const tab = ui.classTab||'eleve';
   if(tab==='eleve'){
@@ -10711,7 +10718,7 @@ boot();
   function topOffset(){
     let t = 0;
     const nav = document.querySelector('.fb-nav');
-    if(nav){ const r = nav.getBoundingClientRect(); if(r.top <= 2 && r.bottom > 0) t = Math.max(t, r.bottom); }
+    if(nav){ const r = nav.getBoundingClientRect(); if(r.top <= 24 && r.bottom > 0) t = Math.max(t, r.bottom + 4); }
     const bar = document.getElementById('grade-focus-bar');
     if(bar && !bar.hidden){ const r = bar.getBoundingClientRect(); if(r.top <= 70 && r.bottom > 0) t = Math.max(t, r.bottom); }
     return t;
