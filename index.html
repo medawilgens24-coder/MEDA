@@ -7233,6 +7233,10 @@ function classManager(cls, role){
     ${role==='admin' ? `<a id="back-to-classes" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas yo</a>`:''}
     ${role==='teacher' && classesForTeacher(session.teacherId).length>1 ? `<a id="back-to-teacher-home" style="cursor:pointer;font-size:13px;color:var(--blue-text);font-weight:700;">← Klas mwen</a>` : ''}
     <h1 class="page-title" style="margin-top:6px">${escapeHtml(cls.name)}</h1>
+    <form id="rename-class-form" class="inline-form" style="margin:4px 0 10px;gap:8px;align-items:flex-end">
+      <div class="field" style="margin:0;flex:1;min-width:160px"><label>Chanje non klas la</label><input id="rename-class-input" value="${escapeHtml(cls.name)}" maxlength="60"></div>
+      <button class="btn btn-primary btn-pill" type="submit">Anrejistre non an</button>
+    </form>
     <p class="page-sub">Pwofesè: ${escapeHtml(classTeacherLabel(cls))}${(role==='admin' && cls.teacherMode!=='multiple' && cls.teacherId) ? ` · Kòd koneksyon pwofesè a: <span class="code-chip">${(findTeacherById(cls.teacherId)||{}).code||'—'}</span>` : ''} · Kòd klas (referans): <span class="code-chip">${cls.code}</span></p>
   </div>
   <div class="tab-strip">
@@ -7521,7 +7525,7 @@ function tabPalmares(cls){
     ${ranked.length===0? `<div class="empty-state">Poko gen nòt antre pou trimès sa a.</div>` : `
     <div style="overflow-x:auto">
     <table data-sticky-head><thead><tr><th>Ran</th><th>Elèv</th>${cls.subjects.map(s=>`<th>${escapeHtml(s.name)} <span style="opacity:.55">/${s.coef}</span></th>`).join('')}<th>Total</th><th>Mwayèn ${avgScaleLabel()}</th><th>Mansyon</th></tr></thead><tbody>
-    ${ranked.map(r=>{
+    ${ranked.slice().sort((a,b)=>cls.students.findIndex(x=>x.id===a.student.id)-cls.students.findIndex(x=>x.id===b.student.id)).map(r=>{
       const {sumPoints, totalMax} = studentGradeTotal(cls, term, r.student.id);
       return `
       <tr>
@@ -8194,7 +8198,10 @@ function downloadPrintAreaAsHtml(filenameBase){
    efè segondè — sa pèmèt itilize menm rezilta a ni pou apèsi sou paj la
    (doc-preview-scroll) ni pou #print-area lè n ap reyèlman enprime. */
 function buildPalmaresHtml(cls, term){
-  const {ranked} = computeRanking(cls, term);
+  const {ranked: rankedByScore} = computeRanking(cls, term);
+  /* Menm lòd elèv ak sa w wè lè w ap antre nòt (lòd lis klas la); kolòn Rang lan rete kòrèk. */
+  const entryIdx = {}; cls.students.forEach((s,i)=>{ entryIdx[s.id]=i; });
+  const ranked = rankedByScore.slice().sort((a,b)=>(entryIdx[a.student.id]??1e9)-(entryIdx[b.student.id]??1e9));
   const rows = ranked.map(r=>{
     /* Total posib la kalkile sèlman sou matyè ki gen nòt (egzanp 505 / 1600 si yon matyè manke),
        menm jan ak mwayèn nan. */
@@ -8234,12 +8241,12 @@ function buildBulletinHtml(cls, term, studentId){
   const {ranked} = computeRanking(cls, term);
   const row = ranked.find(r=>r.student.id===studentId);
   const g = (cls.grades[term] && cls.grades[term][studentId]) || {};
-  const rows = cls.subjects.map(sub=>`<tr><td>${escapeHtml(sub.name)}</td><td>${g[sub.id]??'—'} / ${sub.coef}</td></tr>`).join('');
   const {sumPoints, totalMax} = studentGradeTotal(cls, term, studentId);
+  /* Matyè yo an kolòn, menm jan ak tablo antre nòt la. */
   const bodyHtml = `
-      <table class="p-table">
-        <thead><tr><th>Matière</th><th>Note / Barème</th></tr></thead>
-        <tbody>${rows}<tr style="font-weight:800;border-top:2px solid #000"><td>TOTAL</td><td>${sumPoints} / ${totalMax}</td></tr></tbody>
+      <table class="p-table p-table-compact">
+        <thead><tr><th>Élève</th>${cls.subjects.map(s=>`<th>${escapeHtml(s.name)}<br><span style="font-weight:400">(/${s.coef})</span></th>`).join('')}<th>Total</th></tr></thead>
+        <tbody><tr><td>${escapeHtml(st.name)}</td>${cls.subjects.map(sub=>`<td>${g[sub.id]??'—'}</td>`).join('')}<td style="font-weight:800">${sumPoints} / ${totalMax}</td></tr></tbody>
       </table>
       <div class="p-avgline">
         <strong>Moyenne générale ${avgScaleLabel()}:</strong> ${row? fmtAvg(row.avg): '—'} &nbsp;&nbsp;
@@ -10354,6 +10361,19 @@ function wireEvents(view){
 }
 
 function wireClassManager(cls, role){
+  const renameForm = document.getElementById('rename-class-form');
+  if(renameForm) renameForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const newName = document.getElementById('rename-class-input').value.trim();
+    if(!newName){ await showAlert('Non klas la pa ka vid.'); return; }
+    if(newName===cls.name) return;
+    const dup = DATA.classes.some(c=>c.id!==cls.id && normSearch(c.name)===normSearch(newName));
+    if(dup && !await showConfirm('Gen yon lòt klas ki deja gen non sa a. Kontinye kanmenm?')) return;
+    cls.name = newName;
+    await saveData();
+    await showAlert('Non klas la chanje.');
+    role==='admin' ? render('admin') : render('teacher');
+  });
   document.querySelectorAll('[data-ctab]').forEach(b=>b.addEventListener('click', ()=>{ ui.classTab=b.dataset.ctab; role==='admin'? render('admin') : render('teacher'); }));
   const tab = ui.classTab||'eleve';
   if(tab==='eleve'){
