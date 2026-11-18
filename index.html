@@ -1513,6 +1513,12 @@
   .sticky-ghost{position:fixed;z-index:14;overflow:hidden;background:var(--bg);box-shadow:0 6px 14px rgba(0,0,0,.14);border-radius:0 0 10px 10px;display:none;pointer-events:none;}
   .sticky-ghost table{margin:0;table-layout:fixed;border-collapse:separate;border-spacing:0;}
   .sticky-ghost th:first-child{position:sticky;left:0;z-index:3;background:var(--bg);}
+  /* Palmarès : kolòn Ran + Elèv rete fikse a goch pandan nòt yo pase anba yo lè w defile */
+  table.pal-table th:nth-child(1),table.pal-table td:nth-child(1){position:sticky;left:0;z-index:2;min-width:52px;max-width:52px;width:52px;box-sizing:border-box;background-color:var(--card);}
+  table.pal-table th:nth-child(2),table.pal-table td:nth-child(2){position:sticky;left:52px;z-index:2;min-width:130px;background-color:var(--card);box-shadow:4px 0 6px -4px rgba(0,0,0,.18);}
+  table.pal-table th:nth-child(1),table.pal-table th:nth-child(2){background-color:var(--bg);z-index:3;}
+  table.pal-table tbody tr:nth-child(even) td:nth-child(1),table.pal-table tbody tr:nth-child(even) td:nth-child(2){background-image:linear-gradient(rgba(24,119,242,.025),rgba(24,119,242,.025));}
+  .sticky-ghost table.pal-table th:nth-child(1),.sticky-ghost table.pal-table th:nth-child(2){position:sticky;background-color:var(--bg);z-index:3;}
   @media print{.sticky-ghost{display:none !important;}}
 </style>
 <style id="nav-compact-css">
@@ -7528,7 +7534,7 @@ function tabPalmares(cls){
     </div>
     ${ranked.length===0? `<div class="empty-state">Poko gen nòt antre pou trimès sa a.</div>` : `
     <div style="overflow-x:auto">
-    <table data-sticky-head><thead><tr><th>Ran</th><th>Elèv</th>${cls.subjects.map(s=>`<th>${escapeHtml(s.name)} <span style="opacity:.55">/${s.coef}</span></th>`).join('')}<th>Total</th><th>Mwayèn ${avgScaleLabel()}</th><th>Mansyon</th></tr></thead><tbody>
+    <table class="pal-table" data-sticky-head><thead><tr><th>Ran</th><th>Elèv</th>${cls.subjects.map(s=>`<th>${escapeHtml(s.name)} <span style="opacity:.55">/${s.coef}</span></th>`).join('')}<th>Total</th><th>Mwayèn ${avgScaleLabel()}</th><th>Mansyon</th></tr></thead><tbody>
     ${ranked.slice().sort((a,b)=>cls.students.findIndex(x=>x.id===a.student.id)-cls.students.findIndex(x=>x.id===b.student.id)).map(r=>{
       const {sumPoints, totalMax} = studentGradeTotal(cls, term, r.student.id);
       return `
